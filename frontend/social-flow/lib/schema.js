@@ -1,12 +1,13 @@
+import { SITE_URL, SITE_HOST } from './site';
 export const generateWebsiteSchema = () => ({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'SocialPully',
-  url: 'https://socialpully.com',
+  url: SITE_URL,
   description: 'Free video downloader for Instagram, TikTok, Facebook, YouTube',
   potentialAction: {
     '@type': 'SearchAction',
-    target: 'https://socialpully.com/?q={search_term_string}',
+    target: `${SITE_URL}/?q={search_term_string}`,
     'query-input': 'required name=search_term_string'
   }
 });
@@ -15,8 +16,8 @@ export const generateOrganizationSchema = () => ({
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'SocialPully',
-  url: 'https://socialpully.com',
-  logo: 'https://socialpully.com/logo.png',
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo.png`,
   sameAs: [
     'https://twitter.com/SocialPully',
     'https://facebook.com/SocialPully',
@@ -47,7 +48,7 @@ export const generateSoftwareApplicationSchema = () => ({
     worstRating: '1'
   },
   description: 'Free online video downloader for Instagram Reels, TikTok, Facebook, YouTube',
-  screenshot: 'https://socialpully.com/screenshot.jpg'
+  screenshot: `${SITE_URL}/screenshot.jpg`
 });
 
 export const generateHowToSchema = (platform) => {
@@ -55,42 +56,42 @@ export const generateHowToSchema = (platform) => {
     instagram: [
       { text: 'Open Instagram and find the Reel you want to download' },
       { text: 'Tap the three dots menu and select "Copy Link"' },
-      { text: 'Visit SocialPully.com/instagram-reels-downloader' },
+      { text: `Visit ${SITE_HOST}/instagram-reels-downloader` },
       { text: 'Paste the Instagram Reel link into the downloader' },
       { text: 'Select your preferred quality and click Download' }
     ],
     tiktok: [
       { text: 'Open TikTok and find the video you want' },
       { text: 'Tap the Share button and select "Copy Link"' },
-      { text: 'Go to SocialPully.com/tiktok-video-downloader' },
+      { text: `Go to ${SITE_HOST}/tiktok-video-downloader` },
       { text: 'Paste the TikTok link and choose "No Watermark"' },
       { text: 'Click Download to save the video' }
     ],
     twitter: [
       { text: 'Open Twitter/X and find the video you want to download' },
       { text: 'Click the Share button and select "Copy Link"' },
-      { text: 'Visit SocialPully.com/twitter-video-downloader' },
+      { text: `Visit ${SITE_HOST}/twitter-video-downloader` },
       { text: 'Paste the Twitter video link into the downloader' },
       { text: 'Select your preferred quality and click Download' }
     ],
     pinterest: [
       { text: 'Open Pinterest and find the video Pin you want to download' },
       { text: 'Tap the Share button and select "Copy Link"' },
-      { text: 'Visit SocialPully.com/pinterest-video-downloader' },
+      { text: `Visit ${SITE_HOST}/pinterest-video-downloader` },
       { text: 'Paste the Pinterest video link into the downloader' },
       { text: 'Click Download to save the video to your device' }
     ],
     youtube: [
       { text: 'Open YouTube and find the video you want to download' },
       { text: 'Click the Share button and select "Copy Link"' },
-      { text: 'Visit SocialPully.com/youtube-video-downloader' },
+      { text: `Visit ${SITE_HOST}/youtube-video-downloader` },
       { text: 'Paste the YouTube video link into the downloader' },
       { text: 'Select your preferred quality and click Download' }
     ],
     facebook: [
       { text: 'Open Facebook and find the video you want to download' },
       { text: 'Click the three dots menu and select "Copy Link"' },
-      { text: 'Visit SocialPully.com/facebook-video-downloader' },
+      { text: `Visit ${SITE_HOST}/facebook-video-downloader` },
       { text: 'Paste the Facebook video link into the downloader' },
       { text: 'Choose your preferred quality and click Download' }
     ]
@@ -161,7 +162,7 @@ export const generateArticleSchema = (article) => ({
     name: 'SocialPully',
     logo: {
       '@type': 'ImageObject',
-      url: 'https://socialpully.com/logo.png'
+      url: `${SITE_URL}/logo.png`
     }
   }
 });

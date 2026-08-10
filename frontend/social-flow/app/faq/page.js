@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema } from '@/lib/schema';
 
@@ -6,12 +7,12 @@ export const metadata = {
   description: 'Get answers to common questions about downloading videos from Instagram, TikTok, Facebook, YouTube. Free support and guides.',
   keywords: ['video downloader faq', 'how to download videos', 'instagram downloader help', 'tiktok downloader questions'],
   alternates: {
-    canonical: 'https://socialpully.com/faq',
+    canonical: `${SITE_URL}/faq`,
   },
   openGraph: {
     title: 'FAQ - Frequently Asked Questions | SocialPully',
     description: 'Get answers to common questions about downloading videos from Instagram, TikTok, Facebook, YouTube. Free support and guides.',
-    url: 'https://socialpully.com/faq',
+    url: `${SITE_URL}/faq`,
     type: 'website',
   },
   robots: {

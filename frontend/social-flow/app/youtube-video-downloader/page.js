@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema, generateBreadcrumbSchema } from '@/lib/schema';
@@ -33,11 +34,11 @@ export const metadata = {
   openGraph: {
     title: 'YouTube Video Downloader - MP4, HD 1080p',
     description: 'Download YouTube videos in MP4, HD 1080p, 4K quality. Free YouTube to MP4 converter. No software required.',
-    url: 'https://socialpully.com/youtube-video-downloader',
+    url: `${SITE_URL}/youtube-video-downloader`,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://socialpully.com/youtube-video-downloader',
+    canonical: `${SITE_URL}/youtube-video-downloader`,
   },
 };
 
@@ -112,8 +113,8 @@ const stats = [
 export default function YouTubeDownloader() {
   const faqSchema = generateFAQSchema(faqs);
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://socialpully.com' },
-    { name: 'YouTube Video Downloader', url: 'https://socialpully.com/youtube-video-downloader' },
+    { name: 'Home', url: SITE_URL },
+    { name: 'YouTube Video Downloader', url: `${SITE_URL}/youtube-video-downloader` },
   ]);
 
   return (

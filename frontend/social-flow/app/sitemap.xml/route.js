@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { getAllBlogPosts } from '@/lib/blog-posts';
 
 // ─────────────────────────────────────────────────────────────────
@@ -5,13 +6,13 @@ import { getAllBlogPosts } from '@/lib/blog-posts';
 // Console: https://search.google.com/search-console
 // Go to Sitemaps → Add a new sitemap → enter: sitemap.xml
 // Also ping Google directly (one-time after deploy):
-// https://www.google.com/ping?sitemap=https://socialpully.com/sitemap.xml
+// https://www.google.com/ping?sitemap=${SITE_URL}/sitemap.xml
 // ─────────────────────────────────────────────────────────────────
 
 const TODAY = '2026-04-12';
 
 export async function GET() {
-  const baseUrl = 'https://socialpully.com';
+  const baseUrl = SITE_URL;
 
   const staticRoutes = [
     { path: '',                            priority: '1.0', freq: 'daily',   lastmod: TODAY },

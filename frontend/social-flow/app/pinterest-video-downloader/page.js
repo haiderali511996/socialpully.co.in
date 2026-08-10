@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema, generateHowToSchema, generateBreadcrumbSchema } from '@/lib/schema';
@@ -35,11 +36,11 @@ export const metadata = {
   openGraph: {
     title: 'Pinterest Video Downloader - Save Pinterest Videos Free',
     description: 'Download Pinterest videos, GIFs and pins in HD quality. Free online tool — no registration, works on all devices.',
-    url: 'https://socialpully.com/pinterest-video-downloader',
+    url: `${SITE_URL}/pinterest-video-downloader`,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://socialpully.com/pinterest-video-downloader',
+    canonical: `${SITE_URL}/pinterest-video-downloader`,
   },
 };
 
@@ -91,8 +92,8 @@ export default function PinterestVideoDownloaderPage() {
   const faqSchema = generateFAQSchema(faqs);
   const howToSchema = generateHowToSchema('pinterest');
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://socialpully.com' },
-    { name: 'Pinterest Video Downloader', url: 'https://socialpully.com/pinterest-video-downloader' },
+    { name: 'Home', url: SITE_URL },
+    { name: 'Pinterest Video Downloader', url: `${SITE_URL}/pinterest-video-downloader` },
   ]);
 
   return (

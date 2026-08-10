@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import GoogleAnalytics from './GoogleAnalytics';
@@ -6,7 +7,7 @@ import { generateWebsiteSchema, generateOrganizationSchema, generateSoftwareAppl
 import './globals.css';
 
 export const metadata = {
-  metadataBase: new URL('https://socialpully.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'SocialPully - Free Social Media Video Downloader | Instagram, TikTok, Twitter, Pinterest',
     template: '%s | SocialPully'
@@ -30,7 +31,7 @@ export const metadata = {
     'download twitter videos',
     'save pinterest videos',
   ],
-  authors: [{ name: 'SocialPully', url: 'https://socialpully.com' }],
+  authors: [{ name: 'SocialPully', url: SITE_URL }],
   creator: 'SocialPully',
   publisher: 'SocialPully',
   robots: {
@@ -55,7 +56,7 @@ export const metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://socialpully.com',
+    url: SITE_URL,
     siteName: 'SocialPully',
     title: 'SocialPully - Free Video Downloader',
     description: 'Download videos from any social media platform. Free, fast, HD quality, no watermark.',
