@@ -5,15 +5,12 @@ from django.http import FileResponse, Http404
 from django.conf import settings
 import yt_dlp
 import os
-import json
-from pathlib import Path
 import time
 import shutil
 import subprocess
-from django.http import FileResponse, Http404, StreamingHttpResponse
+from django.http import StreamingHttpResponse
 from django.core.cache import cache
 import requests
-import hashlib
 from .models import VideoDownload
 from .serializers import (
     VideoDownloadSerializer,
@@ -21,6 +18,13 @@ from .serializers import (
     DownloadRequestSerializer,
     AudioDownloadSerializer
 )
+
+TIKTOK_HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.tiktok.com/",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 
 def absolute_url(request, path: str) -> str:
     return request.build_absolute_uri(path)
@@ -258,25 +262,24 @@ class TikTokStreamView(APIView):
                 "quiet": True,
                 "no_warnings": True,
                 "nocheckcertificate": True,
-                "http_headers": {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer": "https://www.tiktok.com/",
-                    "Accept-Language": "en-US,en;q=0.9",
-                },
+                "http_headers": TIKTOK_HTTP_HEADERS,
             }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(video_download.url, download=False)
-                direct_url = pick_progressive_url(info)
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(video_download.url, download=False)
+                    direct_url = pick_progressive_url(info)
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'error': 'Stream link expired and could not be refreshed',
+                    'details': str(e),
+                }, status=status.HTTP_502_BAD_GATEWAY)
 
             cache.set(cache_key, direct_url, 1800)
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Referer": "https://www.tiktok.com/",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
-
-        resp = StreamingHttpResponse(stream_upstream(direct_url, headers), content_type="video/mp4")
+        resp = StreamingHttpResponse(
+            stream_upstream(direct_url, TIKTOK_HTTP_HEADERS), content_type="video/mp4"
+        )
         resp["Access-Control-Allow-Origin"] = "*"
         return resp
 
@@ -488,29 +491,35 @@ class DownloadAudioView(APIView):
     
     def post(self, request):
         serializer = AudioDownloadSerializer(data=request.data)
-        quality = request.data.resolution
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         url = serializer.validated_data['url']
         audio_format = serializer.validated_data['format']
-                # TikTok: stream-proxy flow (no disk write). Keep other platforms unchanged.
+        # Optional: callers may pass a preferred resolution for the TikTok
+        # stream flow below. Absent (the common case) it falls back to "best".
+        quality = request.data.get('resolution') or request.data.get('quality') or 'best'
+
+        # TikTok: stream-proxy flow (no disk write). Keep other platforms unchanged.
         if is_tiktok_url(url):
             ydl_opts = {
                 "format": tiktok_stream_format(quality),
                 "quiet": True,
                 "no_warnings": True,
                 "nocheckcertificate": True,
-                "http_headers": {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer": "https://www.tiktok.com/",
-                    "Accept-Language": "en-US,en;q=0.9",
-                },
+                "http_headers": TIKTOK_HTTP_HEADERS,
             }
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                direct_url = pick_progressive_url(info)
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    direct_url = pick_progressive_url(info)
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'error': 'Failed to fetch TikTok video',
+                    'details': str(e),
+                }, status=status.HTTP_502_BAD_GATEWAY)
 
             # Create DB record (no file_path) so your history still works
             video_download = VideoDownload.objects.create(

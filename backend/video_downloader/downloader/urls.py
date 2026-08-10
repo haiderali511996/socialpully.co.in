@@ -8,6 +8,7 @@ from .views import (
     SupportedSitesView,
     HealthCheckView,
     DownloadHistoryView,
+    TikTokStreamView,
 )
 
 urlpatterns = [
@@ -16,6 +17,7 @@ urlpatterns = [
     path('direct-url/', DirectURLView.as_view(), name='direct-url'),
     path('download-audio/', DownloadAudioView.as_view(), name='download-audio'),
     path('file/<int:pk>/', DownloadFileView.as_view(), name='download-file'),
+    path('tiktok-stream/<int:pk>/', TikTokStreamView.as_view(), name='tiktok-stream'),
     path('supported-sites/', SupportedSitesView.as_view(), name='supported-sites'),
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('history/', DownloadHistoryView.as_view(), name='download-history'),

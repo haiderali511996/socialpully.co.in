@@ -66,7 +66,7 @@ export default function TermsOfServicePage() {
               <p style={{ marginBottom: '12px' }}>You agree to use SocialPully only for lawful purposes. Specifically, you must not use this service to:</p>
               <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <li>Download content that you do not have the right to download</li>
-                <li>Distribute, sell, or commercially exploit downloaded content without the rights holder's permission</li>
+                <li>Distribute, sell, or commercially exploit downloaded content without the rights holder&apos;s permission</li>
                 <li>Attempt to reverse-engineer, scrape, or automate requests to our service in ways that place unreasonable load on our servers</li>
                 <li>Use the service for any purpose that violates applicable laws or third-party platform terms</li>
               </ul>

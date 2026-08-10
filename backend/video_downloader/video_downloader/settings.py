@@ -1,14 +1,43 @@
 import os
+import warnings
 from pathlib import Path
-from celery.schedules import crontab
+
+from django.core.management.utils import get_random_secret_key
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-d=9t)w)$!mjbhg5ppjde2hx$p+is6lwmnn333&-ndrnz3*ak!+')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-local-development-only-do-not-use-in-production'
+    else:
+        # Never ship a hard-coded key. Generate an ephemeral one so the process
+        # still boots, but make the misconfiguration loud (sessions and signed
+        # values are invalidated on every restart until SECRET_KEY is set).
+        SECRET_KEY = get_random_secret_key()
+        warnings.warn(
+            'SECRET_KEY is not set; using a random key generated at startup. '
+            'Set the SECRET_KEY environment variable in production.',
+            RuntimeWarning,
+        )
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get('ALLOWED_HOSTS', '*').split(',') if h.strip()
+]
+
+# Railway (and most PaaS) terminate TLS at the edge and forward this header.
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+]
 
 # Add this line to fix the warning
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -58,7 +87,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'video_downloader.wsgi.application'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Set CORS_ALLOWED_ORIGINS (comma separated) to lock the API down to the
+# frontend origins. Left unset it stays open, which is the current behaviour.
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
+]
+CORS_ALLOW_ALL_ORIGINS = not CORS_ALLOWED_ORIGINS
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -102,7 +136,29 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Caching - Use Redis only if REDIS_URL is available
+# Caching - Use Redis only if REDIS_URL is available.
+# Without it the local-memory cache is used, which is per-process: the TikTok
+# direct-URL cache in downloader/views.py only works across requests when the
+# server runs a single worker.
+REDIS_URL = os.environ.get('REDIS_URL')
+
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'socialpully-default',
+        }
+    }
 
 
 # yt-dlp settings
