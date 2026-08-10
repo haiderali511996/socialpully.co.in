@@ -3,6 +3,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python manage.py migrate && gunicorn video_downloader.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300"
+    "startCommand": "cd video_downloader && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn video_downloader.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300"
   }
 }

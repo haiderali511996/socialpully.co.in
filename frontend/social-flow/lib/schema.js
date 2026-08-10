@@ -96,12 +96,23 @@ export const generateHowToSchema = (platform) => {
     ]
   };
 
+  const labels = {
+    instagram: 'Instagram Reels',
+    tiktok: 'TikTok Videos',
+    twitter: 'Twitter/X Videos',
+    pinterest: 'Pinterest Videos',
+    youtube: 'YouTube Videos',
+    facebook: 'Facebook Videos',
+  };
+
+  const label = labels[platform] || 'Videos';
+
   return {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
-    name: `How to Download ${platform === 'instagram' ? 'Instagram Reels' : 'TikTok Videos'}`,
-    description: `Step by step guide to download ${platform === 'instagram' ? 'Instagram Reels' : 'TikTok videos'} without watermark`,
-    step: steps[platform].map((step, index) => ({
+    name: `How to Download ${label}`,
+    description: `Step by step guide to download ${label.toLowerCase()} without watermark`,
+    step: (steps[platform] || []).map((step, index) => ({
       '@type': 'HowToStep',
       position: index + 1,
       text: step.text

@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SocialPully — Frontend
 
-## Getting Started
+Next.js 14 (App Router) marketing site and download UI for SocialPully. All pages
+are JavaScript (`.js`) — there is no TypeScript source despite the `tsconfig.json`
+kept around for the `@/*` path alias.
 
-First, run the development server:
+## Stack
+
+- Next.js 14 (App Router, server components by default)
+- React 18
+- Tailwind CSS 3 + `@tailwindcss/typography` (used by the blog)
+- `lucide-react` for icons
+- ESLint via `next/core-web-vitals` (`.eslintrc.json`)
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill in the values
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Production build (also runs ESLint) |
+| `npm start` | Serve the production build |
+| `npm run lint` | ESLint only |
+| `ANALYZE=true npm run build` | Build with the bundle analyzer |
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+See `.env.example`. `NEXT_PUBLIC_API_BASE` points at the Django backend in
+`../../backend/video_downloader`; without it the components fall back to the
+deployed Railway URL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Layout
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/                  Routes (one directory per page) + /api proxy, robots.txt, sitemap.xml
+components/           Shared UI (DownloadForm is the main interactive piece)
+lib/                  Blog content, SEO metadata and JSON-LD schema builders
+middleware.js         301/308 redirects for legacy and short URLs
+public/               Static assets
+```

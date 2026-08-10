@@ -45,7 +45,7 @@ export default function AboutPage() {
             At SocialPully, we believe that great content should be accessible to everyone. Our mission is to provide a fast, free, and reliable way to download videos from Instagram, TikTok, Facebook, YouTube, Twitter, and 15+ other social media platforms.
           </p>
           <p className="text-lg text-gray-700 mb-6">
-            We understand that sometimes you want to save memorable moments, share content offline, or create compilations from your favorite creators. That's why we built SocialPully - to make video downloading simple, fast, and completely free.
+            We understand that sometimes you want to save memorable moments, share content offline, or create compilations from your favorite creators. That&apos;s why we built SocialPully - to make video downloading simple, fast, and completely free.
           </p>
         </div>
       </section>
@@ -75,7 +75,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-2xl font-bold mb-4">100% Safe & Secure</h3>
               <p className="text-gray-600">
-                Your privacy matters. We don't store your data, require registration, or track your downloads. Completely anonymous.
+                Your privacy matters. We don&apos;t store your data, require registration, or track your downloads. Completely anonymous.
               </p>
             </div>
 
@@ -126,14 +126,14 @@ export default function AboutPage() {
             <div className="bg-white p-8 rounded-2xl shadow-lg">
               <h3 className="text-2xl font-bold mb-4 text-purple-600">User Privacy</h3>
               <p className="text-gray-700">
-                Your privacy is non-negotiable. We don't collect personal information, track your activity, or sell your data. What you download is your business.
+                Your privacy is non-negotiable. We don&apos;t collect personal information, track your activity, or sell your data. What you download is your business.
               </p>
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-lg">
               <h3 className="text-2xl font-bold mb-4 text-pink-600">Quality & Speed</h3>
               <p className="text-gray-700">
-                We're committed to providing the fastest download speeds and highest quality videos. Our infrastructure is constantly optimized for performance.
+                We&apos;re committed to providing the fastest download speeds and highest quality videos. Our infrastructure is constantly optimized for performance.
               </p>
             </div>
           </div>

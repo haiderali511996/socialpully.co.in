@@ -1,40 +1,5 @@
 export const blogPosts = [
   {
-    slug: 'how-to-download-instagram-reels-2024',
-    title: 'How to Download Instagram Reels in 2026 - Complete Guide',
-    excerpt: 'Learn how to download Instagram Reels without watermark in seconds — works on iPhone, Android & PC. Free, fast, no login needed. Updated for 2026.',
-    content: `
-      <h2>Complete Guide: Download Instagram Reels Without Watermark</h2>
-      <p>Instagram Reels have become one of the most popular content formats on social media. Whether you want to save your favorite Reels for offline viewing or need to download them for content creation, this guide covers everything you need to know.</p>
-      
-      <h3>Why Download Instagram Reels?</h3>
-      <ul>
-        <li>Save entertaining content for offline viewing</li>
-        <li>Create compilation videos (with proper attribution)</li>
-        <li>Archive your own Reels as backup</li>
-        <li>Share content with friends who don't use Instagram</li>
-      </ul>
-
-      <h3>Method 1: Using Our Instagram Downloader</h3>
-      <p>The easiest and fastest way to <a href="https://socialpully.com/instagram-reels-downloader">download Instagram Reels</a> is using our free online downloader:</p>
-      <ol>
-        <li>Open the Instagram app and navigate to the Reel you want</li>
-        <li>Tap the three dots menu and select "Copy Link"</li>
-        <li>Visit our <a href="https://socialpully.com/">Instagram Reels Downloader</a></li>
-        <li>Paste the link and click Download</li>
-        <li>Your Reel downloads instantly without watermark!</li>
-      </ol>
-
-      <h3>Best Practices for Downloading Instagram Reels</h3>
-      <p>Always respect copyright and creator rights. Only download content for personal use, and always give proper credit if you plan to repost.</p>
-    `,
-    image: '/blog/instagram-reels-guide.jpg',
-    date: '2026-01-15',
-    author: 'Sarah Johnson',
-    category: 'Instagram',
-    keywords: ['instagram reels', 'download instagram reels', 'instagram downloader', 'reels without watermark']
-  },
-  {
     slug: 'how-to-download-instagram-reels',
     title: 'How to Download Instagram Reels in 2026 - Complete Guide',
     excerpt: 'Learn how to download Instagram Reels without watermark in seconds — works on iPhone, Android & PC. Free, fast, no login needed. Updated for 2026.',

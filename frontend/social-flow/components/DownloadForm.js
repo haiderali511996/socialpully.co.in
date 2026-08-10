@@ -56,6 +56,14 @@ async function triggerBrowserDownload(fileUrl, fallbackFilename) {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;';
 
+  // Values are serialised as JSON rather than inlined raw: titles and URLs
+  // routinely contain quotes, backslashes and angle brackets, which would
+  // otherwise break out of the script (or the document) entirely.
+  const payload = JSON.stringify({
+    href: String(fileUrl),
+    name: String(fallbackFilename || 'video.mp4'),
+  }).replace(/</g, '\\u003c');
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -63,9 +71,10 @@ async function triggerBrowserDownload(fileUrl, fallbackFilename) {
     <body>
       <script>
         window.onload = function() {
+          const data = ${payload};
           const a = document.createElement('a');
-          a.href = '${fileUrl}';
-          a.download = '${fallbackFilename || 'video.mp4'}';
+          a.href = data.href;
+          a.download = data.name;
           a.style.display = 'none';
           document.body.appendChild(a);
           a.click();
