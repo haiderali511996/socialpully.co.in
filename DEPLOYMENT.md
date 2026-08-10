@@ -1,20 +1,46 @@
 # Deploying to cPanel (hunainimpex.com)
 
-Target setup:
+## Domain plan
 
-| Piece | Where it runs | How |
+Create two subdomains:
+
+| Subdomain | Serves | cPanel app type |
 | --- | --- | --- |
-| Next.js frontend | cPanel subdomain of `hunainimpex.com` | Node.js app under Phusion Passenger |
-| Django API | Railway (unchanged) | Already deployed |
+| `socialpully.hunainimpex.com` | Next.js frontend | Setup **Node.js** App |
+| `socialpully-api.hunainimpex.com` | Django API | Setup **Python** App, or a CNAME to Railway |
 
-The browser talks to the Django API **directly** from the client. cPanel only
-ever serves the frontend, so the two can be deployed and restarted
-independently.
+Why these names:
+
+- **Not `api.hunainimpex.com`.** `api.` is the generic name for the whole
+  domain. Spending it on one product means the next app you host has nowhere
+  natural to go. Pairing `socialpully.` with `socialpully-api.` keeps the
+  relationship obvious and leaves `api.` free.
+- **Two flat subdomains, not `api.socialpully.hunainimpex.com`.** That would be
+  a fourth-level name. Let's Encrypt issues for it fine, but cPanel's AutoSSL
+  is noticeably less reliable at that depth, and a certificate failure here
+  breaks the whole site (see step 02).
+
+Shorter alternative if you prefer: `sp.hunainimpex.com` and
+`spapi.hunainimpex.com`. Keep whatever pairing you pick consistent — the names
+end up in canonical tags, CORS config and Search Console.
+
+> **One caveat that is not technical.** `hunainimpex.com` reads as an
+> import/export business. A video-downloader tool on its subdomain shares that
+> domain's reputation in both directions. If SocialPully is meant to be its own
+> brand, its own domain serves it better long term. Nothing below stops working
+> either way — it's a positioning call, not a blocker.
 
 Throughout this document, replace:
 
 - `USER` — your cPanel username
-- `socialpully.hunainimpex.com` — the subdomain you actually create
+- the two subdomains above — with whatever you actually create
+
+---
+
+# Part A — Frontend (Node.js app)
+
+The browser talks to the Django API **directly** from the client, so the two
+apps deploy and restart independently.
 
 ---
 
@@ -124,10 +150,15 @@ step 4.
 ```bash
 cat > .env.production <<'EOF'
 NEXT_PUBLIC_SITE_URL=https://socialpully.hunainimpex.com
-NEXT_PUBLIC_API_BASE=https://socialpullybackend-production.up.railway.app
+NEXT_PUBLIC_API_BASE=https://socialpully-api.hunainimpex.com
 NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=
 EOF
 ```
+
+> `NEXT_PUBLIC_API_BASE` must match whatever Part B leaves you with. If you are
+> keeping the API on Railway without a custom domain, use
+> `https://socialpullybackend-production.up.railway.app` here instead. Changing
+> it later means editing this file and **rebuilding**.
 
 > **Why a file and not cPanel's "Environment variables" UI?**
 > Every `NEXT_PUBLIC_*` value is compiled into the JavaScript bundle at **build**
@@ -173,10 +204,11 @@ Visit `https://socialpully.hunainimpex.com`. You should get the homepage.
 
 ---
 
-## 7. Point the Django API at the new origin
+## 7. Let the API accept the new origin
 
-The backend stays on Railway; it just needs to trust the new frontend origin.
-In the Railway dashboard → your service → **Variables**:
+Wherever the API ends up living (Part B), it has to trust the frontend's
+origin. If you are keeping it on Railway, set these in the Railway dashboard →
+your service → **Variables**:
 
 | Variable | Value |
 | --- | --- |
@@ -259,22 +291,167 @@ value — restarting alone will not pick it up.
 
 ---
 
-## Appendix: if you later move Django to cPanel too
+---
 
-It is possible via **Setup Python App** (Passenger + a `passenger_wsgi.py`), but
-be aware of what breaks on shared hosting:
+# Part B — Backend (Django API)
 
-- **No ffmpeg.** The app already degrades gracefully, but merged high-quality
-  YouTube downloads stop working — you get pre-merged formats only.
-- **Request timeouts.** Shared hosts usually cap requests near 60–120s. This app
-  asks for 300s, and large downloads will be cut off.
-- **Disk quota.** `DownloadVideoView` writes every video to `media/downloads/`
-  and nothing cleans it up. It will eat your quota.
-- **IP reputation.** TikTok and Instagram block many shared-hosting IP ranges
-  outright. (Testing this repo from a datacenter IP returns
-  "Your IP address is blocked from accessing this post".)
-- **Terms of service.** Most shared-hosting AUPs prohibit video-downloader
-  services and the bandwidth they generate. Check yours before you migrate.
+You have two ways to put the API on `socialpully-api.hunainimpex.com`. They
+differ in where the work actually runs.
 
-Railway is the better home for this workload. If you still want to move it, say
-so and I'll add the `passenger_wsgi.py` and the matching steps.
+## B1 — Point the subdomain at Railway (recommended)
+
+Keep Django running on Railway and give it your branded hostname. You get the
+domain you want without inheriting shared hosting's limits.
+
+1. Railway → your service → **Settings → Networking → Custom Domain** → add
+   `socialpully-api.hunainimpex.com`. Railway shows a CNAME target.
+2. cPanel → **Domains → Zone Editor** for `hunainimpex.com` → **Add Record**:
+   - Type: `CNAME`
+   - Name: `socialpully-api`
+   - Record: the target Railway gave you
+3. Do **not** create a cPanel subdomain for this name — a CNAME and a local
+   docroot for the same host conflict, and cPanel will answer instead of Railway.
+4. Wait for DNS to propagate, then set on Railway:
+
+   | Variable | Value |
+   | --- | --- |
+   | `ALLOWED_HOSTS` | `socialpully-api.hunainimpex.com` |
+   | `CSRF_TRUSTED_ORIGINS` | `https://socialpully-api.hunainimpex.com` |
+   | `CORS_ALLOWED_ORIGINS` | `https://socialpully.hunainimpex.com` |
+
+Railway issues the TLS certificate itself. Nothing else changes.
+
+## B2 — Run Django on cPanel (Setup Python App)
+
+Everything needed is committed: `passenger_wsgi.py` is the entry point, and the
+MySQL shim in `video_downloader/__init__.py` handles cPanel's database.
+
+Read [What actually breaks](#what-actually-breaks-on-shared-hosting) at the end
+of this part before committing to it.
+
+### B2.1 Create the subdomain and certificate
+
+Same as frontend steps 01–02, for `socialpully-api.hunainimpex.com`.
+
+### B2.2 Create the MySQL database
+
+cPanel gives you MySQL, not PostgreSQL.
+
+cPanel → **Databases → MySQL® Databases**:
+
+1. Create a database, e.g. `USER_socialpully`
+2. Create a user with a strong password
+3. Add the user to the database with **All Privileges**
+
+cPanel prefixes both names with your username — note the full names.
+
+### B2.3 Create the Python application
+
+cPanel → **Software → Setup Python App** → **Create Application**
+
+| Field | Value |
+| --- | --- |
+| Python version | 3.11 or newer (Django 5.2 requires 3.10+) |
+| Application root | `repos/socialpully/backend/video_downloader` |
+| Application URL | `socialpully-api.hunainimpex.com` |
+| Application startup file | `passenger_wsgi.py` |
+| Application Entry point | `application` |
+
+Copy the activation command cPanel prints at the top of the page.
+
+### B2.4 Install dependencies
+
+In cPanel → **Terminal**, paste the activation command, then:
+
+```bash
+# swap the PostgreSQL driver for the pure-Python MySQL one:
+# shared hosting has no compiler for mysqlclient, and psycopg2 is unused here
+sed -i 's/^psycopg2-binary/# psycopg2-binary/' requirements.txt
+pip install -r requirements.txt
+pip install PyMySQL==1.1.2
+```
+
+`video_downloader/__init__.py` registers PyMySQL as MySQLdb automatically, so
+Django's MySQL backend works with no further changes.
+
+### B2.5 Configure
+
+```bash
+cat > .env <<'EOF'
+SECRET_KEY=paste-a-generated-key-here
+DEBUG=False
+ALLOWED_HOSTS=socialpully-api.hunainimpex.com
+CORS_ALLOWED_ORIGINS=https://socialpully.hunainimpex.com
+CSRF_TRUSTED_ORIGINS=https://socialpully-api.hunainimpex.com
+DATABASE_URL=mysql://USER_dbuser:PASSWORD@localhost:3306/USER_socialpully
+EOF
+chmod 600 .env
+```
+
+Generate the key with:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+```
+
+`passenger_wsgi.py` reads this file at startup. Real environment variables set
+in cPanel's UI take precedence, so you can use either — the file is just less
+fiddly. Unlike the frontend, Django reads config at request time, so no rebuild
+is involved: changing `.env` needs only a restart.
+
+### B2.6 Migrate and collect static
+
+```bash
+python manage.py migrate
+python manage.py collectstatic --noinput
+```
+
+### B2.7 Start and verify
+
+Click **Restart** in Setup Python App, then:
+
+```bash
+curl -s https://socialpully-api.hunainimpex.com/api/health/
+```
+
+You should get JSON including `yt_dlp_version`. Note whether
+`ffmpeg_installed` is `true` — if it is `false`, see below.
+
+### B2.8 Set up the cleanup cron — do not skip this
+
+`DownloadVideoView` writes every requested video into `media/downloads/` and
+nothing removes them. On Railway that disk is ephemeral so it self-corrects; on
+cPanel it is your account quota, and it *will* fill up.
+
+A management command is committed for this. cPanel → **Advanced → Cron Jobs**,
+every 6 hours:
+
+```
+0 */6 * * * /home/USER/virtualenv/repos/socialpully/backend/video_downloader/3.11/bin/python /home/USER/repos/socialpully/backend/video_downloader/manage.py cleanup_downloads --hours 6
+```
+
+Use the interpreter path from your app's activation command. Check what it
+would remove first:
+
+```bash
+python manage.py cleanup_downloads --hours 6 --dry-run
+```
+
+It deletes files older than the cutoff and marks the matching database rows as
+`expired`, so `/api/file/<id>/` stops pointing at files that are gone.
+
+### What actually breaks on shared hosting
+
+None of these stop the app booting. They shape what it can do.
+
+| Limit | Effect |
+| --- | --- |
+| **No ffmpeg** | `/api/health/` reports `ffmpeg_installed: false`. Merged high-quality YouTube downloads stop working; you get pre-merged formats only. The app degrades gracefully and says so in its response. Ask your host — some will install it. |
+| **Request timeouts** | Shared hosts usually cap requests at 60–120s. The app asks for 300s. Long videos get cut off mid-download. |
+| **Memory** | yt-dlp plus Django in one Passenger process is tight under a 1 GB LVE limit. Concurrent downloads are what push it over. |
+| **IP reputation** | TikTok and Instagram block many shared-hosting IP ranges. Testing this repo from a datacenter IP returns *"Your IP address is blocked from accessing this post."* This is the failure most likely to make the site look broken while everything is configured correctly. |
+| **Terms of service** | Most shared-hosting AUPs prohibit video-downloader services and the bandwidth they generate. Worth reading yours before you migrate — a suspension takes the frontend down with it. |
+
+If you hit the IP-block problem, B1 is the fix: move the API back to Railway
+and keep the same hostname via CNAME. Because the frontend only knows
+`NEXT_PUBLIC_API_BASE`, switching is a DNS change plus a rebuild.
