@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { getBlogPost, getAllBlogPosts } from '@/lib/blog-posts';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }) {
     description: post.excerpt,
     keywords: post.keywords,
     alternates: {
-      canonical: `https://socialpully.com/blog/${params.slug}`,
+      canonical: `${SITE_URL}/blog/${params.slug}`,
     },
     robots: {
       index: true,
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }) {
       title: post.title,
       description: post.excerpt,
       type: 'article',
-      url: `https://socialpully.com/blog/${params.slug}`,
+      url: `${SITE_URL}/blog/${params.slug}`,
       publishedTime: post.date,
       authors: [post.author],
     },

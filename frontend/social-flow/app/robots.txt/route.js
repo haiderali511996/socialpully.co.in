@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 export async function GET() {
   const robots = `User-agent: *
 Allow: /
@@ -6,7 +7,7 @@ Allow: /
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://socialpully.com/sitemap.xml`;
+Sitemap: ${SITE_URL}/sitemap.xml`;
 
   return new Response(robots, {
     headers: {

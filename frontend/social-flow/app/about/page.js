@@ -1,13 +1,14 @@
+import { SITE_URL } from '@/lib/site';
 export const metadata = {
   title: 'About SocialPully - Free Video Downloader for All Social Media',
   description: 'Learn about SocialPully, the best free video downloader for Instagram, TikTok, Facebook, YouTube and 15+ platforms. Free, fast, and private.',
   alternates: {
-    canonical: 'https://socialpully.com/about',
+    canonical: `${SITE_URL}/about`,
   },
   openGraph: {
     title: 'About SocialPully - Free Social Media Video Downloader',
     description: 'Learn about SocialPully, the best free video downloader for Instagram, TikTok, Facebook, YouTube and 15+ platforms. Free, fast, and private.',
-    url: 'https://socialpully.com/about',
+    url: `${SITE_URL}/about`,
     type: 'website',
   },
   robots: {

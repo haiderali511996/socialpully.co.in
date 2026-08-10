@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema, generateHowToSchema, generateBreadcrumbSchema } from '@/lib/schema';
@@ -35,11 +36,11 @@ export const metadata = {
   openGraph: {
     title: 'Twitter Video Downloader - Save Videos & GIFs Free',
     description: 'Download Twitter videos, GIFs and X videos in HD quality. Free online tool — no registration, works on all devices.',
-    url: 'https://socialpully.com/twitter-video-downloader',
+    url: `${SITE_URL}/twitter-video-downloader`,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://socialpully.com/twitter-video-downloader',
+    canonical: `${SITE_URL}/twitter-video-downloader`,
   },
 };
 
@@ -89,8 +90,8 @@ export default function TwitterVideoDownloaderPage() {
   const faqSchema = generateFAQSchema(faqs);
   const howToSchema = generateHowToSchema('twitter');
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://socialpully.com' },
-    { name: 'Twitter Video Downloader', url: 'https://socialpully.com/twitter-video-downloader' },
+    { name: 'Home', url: SITE_URL },
+    { name: 'Twitter Video Downloader', url: `${SITE_URL}/twitter-video-downloader` },
   ]);
 
   return (

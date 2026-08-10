@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { Download, Copy, MousePointer } from 'lucide-react';
 import JsonLd from '@/components/JsonLd';
 import { generateHowToSchema } from '@/lib/schema';
@@ -6,12 +7,12 @@ export const metadata = {
   title: 'How It Works - Download Videos in 3 Easy Steps | SocialPully',
   description: 'Learn how to download videos from Instagram, TikTok, Facebook, YouTube in just 3 simple steps. Free, fast, and easy video downloader guide.',
   alternates: {
-    canonical: 'https://socialpully.com/how-it-works',
+    canonical: `${SITE_URL}/how-it-works`,
   },
   openGraph: {
     title: 'How It Works - Download Videos in 3 Easy Steps | SocialPully',
     description: 'Learn how to download videos from Instagram, TikTok, Facebook, YouTube in just 3 simple steps.',
-    url: 'https://socialpully.com/how-it-works',
+    url: `${SITE_URL}/how-it-works`,
     type: 'website',
   },
   robots: {

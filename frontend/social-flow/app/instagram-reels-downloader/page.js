@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema, generateHowToSchema, generateBreadcrumbSchema } from '@/lib/schema';
@@ -32,11 +33,11 @@ export const metadata = {
   openGraph: {
     title: 'Instagram Reels Downloader - No Watermark, HD',
     description: 'Download Instagram reels without watermark in HD quality. Free IG reels downloader. No registration required.',
-    url: 'https://socialpully.com/instagram-reels-downloader',
+    url: `${SITE_URL}/instagram-reels-downloader`,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://socialpully.com/instagram-reels-downloader',
+    canonical: `${SITE_URL}/instagram-reels-downloader`,
   },
 };
 
@@ -83,8 +84,8 @@ export default function InstagramReelsDownloader() {
   const faqSchema = generateFAQSchema(faqs);
   const howToSchema = generateHowToSchema('instagram');
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://socialpully.com' },
-    { name: 'Instagram Reels Downloader', url: 'https://socialpully.com/instagram-reels-downloader' },
+    { name: 'Home', url: SITE_URL },
+    { name: 'Instagram Reels Downloader', url: `${SITE_URL}/instagram-reels-downloader` },
   ]);
 
   return (

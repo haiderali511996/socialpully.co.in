@@ -1,15 +1,16 @@
+import { SITE_URL } from '@/lib/site';
 import Link from 'next/link';
 
 export const metadata = {
   title: 'Terms of Service | SocialPully',
   description: 'Read the SocialPully Terms of Service. Understand the rules and guidelines for using our free social media video downloader tools responsibly.',
   alternates: {
-    canonical: 'https://socialpully.com/terms-of-service',
+    canonical: `${SITE_URL}/terms-of-service`,
   },
   openGraph: {
     title: 'Terms of Service | SocialPully',
     description: 'Read the SocialPully Terms of Service. Understand the rules and guidelines for using our free social media video downloader tools responsibly.',
-    url: 'https://socialpully.com/terms-of-service',
+    url: `${SITE_URL}/terms-of-service`,
     type: 'website',
   },
   robots: {

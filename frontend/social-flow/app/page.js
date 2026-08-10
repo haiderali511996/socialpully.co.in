@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import Link from 'next/link';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
@@ -63,7 +64,7 @@ export const metadata = {
   title: 'Free Online Video Downloader — No Watermark | SocialPully',
   description: 'Download videos from Instagram Reels, TikTok, Facebook, YouTube, Twitter and Pinterest in HD quality. Free, no watermark, no sign-up. Works on all devices.',
   alternates: {
-    canonical: 'https://socialpully.com',
+    canonical: SITE_URL,
   },
   robots: {
     index: true,

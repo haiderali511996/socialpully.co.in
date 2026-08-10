@@ -1,15 +1,16 @@
+import { SITE_URL } from '@/lib/site';
 import Link from 'next/link';
 
 export const metadata = {
   title: 'Privacy Policy | SocialPully',
   description: 'Read the SocialPully Privacy Policy. Learn how we protect your privacy and handle your data when you use our free social media video downloader tools.',
   alternates: {
-    canonical: 'https://socialpully.com/privacy-policy',
+    canonical: `${SITE_URL}/privacy-policy`,
   },
   openGraph: {
     title: 'Privacy Policy | SocialPully',
     description: 'Read the SocialPully Privacy Policy. Learn how we protect your privacy and handle your data when you use our free social media video downloader tools.',
-    url: 'https://socialpully.com/privacy-policy',
+    url: `${SITE_URL}/privacy-policy`,
     type: 'website',
   },
   robots: {

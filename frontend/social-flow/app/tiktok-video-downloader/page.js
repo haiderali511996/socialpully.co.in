@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema, generateHowToSchema, generateBreadcrumbSchema } from '@/lib/schema';
@@ -30,11 +31,11 @@ import { InstagramIcon, FacebookIcon, YouTubeIcon, XTwitterIcon, PinterestIcon, 
   openGraph: {
     title: 'TikTok Video Downloader - No Watermark, HD',
     description: 'Download TikTok videos without watermark in HD quality. Free TikTok to MP4 & MP3 converter.',
-    url: 'https://socialpully.com/tiktok-video-downloader',
+    url: `${SITE_URL}/tiktok-video-downloader`,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://socialpully.com/tiktok-video-downloader',
+    canonical: `${SITE_URL}/tiktok-video-downloader`,
   },
 };
 
@@ -110,8 +111,8 @@ export default function TikTokDownloader() {
   const faqSchema = generateFAQSchema(faqs);
   const howToSchema = generateHowToSchema('tiktok');
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://socialpully.com' },
-    { name: 'TikTok Video Downloader', url: 'https://socialpully.com/tiktok-video-downloader' },
+    { name: 'Home', url: SITE_URL },
+    { name: 'TikTok Video Downloader', url: `${SITE_URL}/tiktok-video-downloader` },
   ]);
 
   return (

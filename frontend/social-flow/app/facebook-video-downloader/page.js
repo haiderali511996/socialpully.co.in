@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import DownloadForm from '@/components/DownloadForm';
 import JsonLd from '@/components/JsonLd';
 import { generateFAQSchema, generateBreadcrumbSchema } from '@/lib/schema';
@@ -32,11 +33,11 @@ export const metadata = {
   openGraph: {
     title: 'Facebook Video Downloader - HD Quality, Free',
     description: 'Download Facebook videos in HD quality for free. Save FB videos, reels, and stories. No registration required.',
-    url: 'https://socialpully.com/facebook-video-downloader',
+    url: `${SITE_URL}/facebook-video-downloader`,
     type: 'website',
   },
   alternates: {
-    canonical: 'https://socialpully.com/facebook-video-downloader',
+    canonical: `${SITE_URL}/facebook-video-downloader`,
   },
 };
 
@@ -114,8 +115,8 @@ const stats = [
 export default function FacebookDownloader() {
   const faqSchema = generateFAQSchema(faqs);
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://socialpully.com' },
-    { name: 'Facebook Video Downloader', url: 'https://socialpully.com/facebook-video-downloader' },
+    { name: 'Home', url: SITE_URL },
+    { name: 'Facebook Video Downloader', url: `${SITE_URL}/facebook-video-downloader` },
   ]);
 
   return (
