@@ -387,11 +387,26 @@ cPanel → **Software → Setup Python App** → **Create Application**
 
 | Field | Value |
 | --- | --- |
-| Python version | 3.11 or newer (Django 5.2 requires 3.10+) |
+| Python version | 3.12 (anything 3.10+ works; Django 5.2 requires it) |
 | Application root | `repos/socialpully/backend/video_downloader` |
 | Application URL | `api.hunainimpex.com` |
 | Application startup file | `passenger_wsgi.py` |
 | Application Entry point | `application` |
+
+> **Clone the repo before you click Create.** cPanel creates the Application
+> root directory if it is missing, and a Python app pointed at an empty
+> directory fails to boot. Part A step 3 covers the clone; the directory
+> `repos/socialpully/backend/video_downloader` must already contain
+> `passenger_wsgi.py` and `manage.py`.
+>
+> Leave the path box next to the **Application URL** dropdown empty — that
+> serves the app at the root of the subdomain. Anything typed there becomes a
+> sub-path, so `/api/health/` would move to `/whatever/api/health/`.
+>
+> **Environment variables** can stay empty here. Step B2.5 writes them to a
+> `.env` file that `passenger_wsgi.py` reads, which keeps the database password
+> out of the cPanel UI and lets you `chmod 600` it. Using this panel instead
+> also works — real environment variables take precedence over the file.
 
 Copy the activation command cPanel prints at the top of the page.
 
@@ -463,7 +478,7 @@ A management command is committed for this. cPanel → **Advanced → Cron Jobs*
 every 6 hours:
 
 ```
-0 */6 * * * /home/USER/virtualenv/repos/socialpully/backend/video_downloader/3.11/bin/python /home/USER/repos/socialpully/backend/video_downloader/manage.py cleanup_downloads --hours 6
+0 */6 * * * /home/USER/virtualenv/repos/socialpully/backend/video_downloader/3.12/bin/python /home/USER/repos/socialpully/backend/video_downloader/manage.py cleanup_downloads --hours 6
 ```
 
 Use the interpreter path from your app's activation command. Check what it
