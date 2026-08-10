@@ -2,38 +2,47 @@
 
 ## Domain plan
 
-Create two subdomains:
-
-| Subdomain | Serves | cPanel app type |
+| Host | Serves | cPanel app type |
 | --- | --- | --- |
-| `socialpully.hunainimpex.com` | Next.js frontend | Setup **Node.js** App |
-| `socialpully-api.hunainimpex.com` | Django API | Setup **Python** App, or a CNAME to Railway |
+| `hunainimpex.com` (apex, main domain) | Next.js frontend | Setup **Node.js** App |
+| `api.hunainimpex.com` | Django API | Setup **Python** App, or a CNAME to Railway |
 
-Why these names:
+These are the committed defaults — `lib/site.js` falls back to
+`https://hunainimpex.com` and the API client falls back to
+`https://api.hunainimpex.com`, so a build with no environment variables set
+already produces the right URLs. Setting them explicitly in `.env.production`
+is still recommended, so a future domain change is one edit.
 
-- **Not `api.hunainimpex.com`.** `api.` is the generic name for the whole
-  domain. Spending it on one product means the next app you host has nowhere
-  natural to go. Pairing `socialpully.` with `socialpully-api.` keeps the
-  relationship obvious and leaves `api.` free.
-- **Two flat subdomains, not `api.socialpully.hunainimpex.com`.** That would be
-  a fourth-level name. Let's Encrypt issues for it fine, but cPanel's AutoSSL
-  is noticeably less reliable at that depth, and a certificate failure here
-  breaks the whole site (see step 02).
+### Read this before you start
 
-Shorter alternative if you prefer: `sp.hunainimpex.com` and
-`spapi.hunainimpex.com`. Keep whatever pairing you pick consistent — the names
-end up in canonical tags, CORS config and Search Console.
+**Putting the frontend on the apex replaces whatever is currently served at
+`hunainimpex.com`.** When you point a cPanel Node.js app at the main domain,
+cPanel writes a Passenger handoff into `public_html/.htaccess` and Apache stops
+serving the files that are there. Concretely:
 
-> **One caveat that is not technical.** `hunainimpex.com` reads as an
-> import/export business. A video-downloader tool on its subdomain shares that
-> domain's reputation in both directions. If SocialPully is meant to be its own
-> brand, its own domain serves it better long term. Nothing below stops working
-> either way — it's a positioning call, not a blocker.
+- Any existing import/export website at `hunainimpex.com` disappears from the
+  web the moment the Node app starts.
+- Any pages of it that Google has indexed start returning the downloader's 404.
+- Email, databases and subdomains are unaffected — this is only about what the
+  web root serves.
 
-Throughout this document, replace:
+So before step 1:
 
-- `USER` — your cPanel username
-- the two subdomains above — with whatever you actually create
+```bash
+# from cPanel Terminal — keep a copy of whatever is there now
+tar czf ~/public_html-backup-$(date +%F).tar.gz -C /home/USER public_html
+```
+
+If `public_html` currently holds a real business site you still want, stop and
+put the downloader on a subdomain instead — everything below works unchanged
+if you swap `hunainimpex.com` for `socialpully.hunainimpex.com`.
+
+### www vs apex
+
+Canonical tags will say `https://hunainimpex.com`, so `www.hunainimpex.com`
+must redirect there rather than serve a duplicate copy. Step 1 covers it.
+
+Throughout this document, replace `USER` with your cPanel username.
 
 ---
 
@@ -65,30 +74,43 @@ Two shared-hosting limits worth checking before you start:
 
 ---
 
-## 1. Create the subdomain
+## 1. Prepare the main domain
 
-cPanel → **Domains → Create A New Domain**
+The apex already exists, so there is nothing to create. Two things to do.
 
-- Domain: `socialpully.hunainimpex.com`
-- Uncheck "Share document root" so it gets its own directory
-- Document root: accept the default (`/home/USER/socialpully.hunainimpex.com`)
+**a. Back up the current web root** — see the warning above:
 
-You will **not** put application code in this document root. Passenger serves
-the app from a separate directory; cPanel wires the document root to it for you
-in step 4. Keeping source out of the document root is what stops anyone from
-fetching your `.env.production` over HTTP.
+```bash
+tar czf ~/public_html-backup-$(date +%F).tar.gz -C /home/USER public_html
+```
+
+**b. Redirect www to the apex.** Edit `/home/USER/public_html/.htaccess` and put
+this at the very top, *above* any block cPanel has written:
+
+```apache
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^www\.hunainimpex\.com$ [NC]
+RewriteRule ^(.*)$ https://hunainimpex.com/$1 [R=301,L]
+```
+
+Doing this in Apache rather than Next.js middleware means the redirect costs
+nothing — it never reaches Node.
+
+> Application code does **not** go in `public_html`. Passenger serves it from a
+> separate directory that cPanel wires up in step 4. Keeping source out of the
+> web root is what stops anyone fetching your `.env.production` over HTTP.
 
 ---
 
-## 2. Issue the SSL certificate
+## 2. Check the SSL certificate
 
-cPanel → **Security → SSL/TLS Status** → tick the new subdomain → **Run AutoSSL**.
+cPanel → **Security → SSL/TLS Status**. The main domain almost certainly has a
+certificate already; confirm it covers **both** `hunainimpex.com` and
+`www.hunainimpex.com`, and run **AutoSSL** if either is missing.
 
-Do this *before* going live. The site calls the Railway API over HTTPS; if the
+This matters before you go live: the site calls the API over HTTPS, and if the
 frontend is served over plain HTTP, browsers block those calls as mixed content
-and every download silently fails.
-
-Wait until the subdomain shows a green padlock before continuing.
+and every download fails silently.
 
 ---
 
@@ -124,7 +146,7 @@ cPanel → **Software → Setup Node.js App** → **Create Application**
 | Node.js version | 20.x (or 18.17+) |
 | Application mode | Production |
 | Application root | `repos/socialpully/frontend/social-flow` |
-| Application URL | `socialpully.hunainimpex.com` |
+| Application URL | `hunainimpex.com` |
 | Application startup file | `server.js` |
 
 `server.js` is committed in the repo. Passenger does not run `next start`; it
@@ -149,16 +171,16 @@ step 4.
 
 ```bash
 cat > .env.production <<'EOF'
-NEXT_PUBLIC_SITE_URL=https://socialpully.hunainimpex.com
-NEXT_PUBLIC_API_BASE=https://socialpully-api.hunainimpex.com
+NEXT_PUBLIC_SITE_URL=https://hunainimpex.com
+NEXT_PUBLIC_API_BASE=https://api.hunainimpex.com
 NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=
 EOF
 ```
 
-> `NEXT_PUBLIC_API_BASE` must match whatever Part B leaves you with. If you are
-> keeping the API on Railway without a custom domain, use
-> `https://socialpullybackend-production.up.railway.app` here instead. Changing
-> it later means editing this file and **rebuilding**.
+> `NEXT_PUBLIC_API_BASE` must match whatever Part B leaves you with. Both
+> routes in Part B end up on `https://api.hunainimpex.com`, so this value is
+> the same either way. Changing it later means editing this file and
+> **rebuilding**.
 
 > **Why a file and not cPanel's "Environment variables" UI?**
 > Every `NEXT_PUBLIC_*` value is compiled into the JavaScript bundle at **build**
@@ -179,8 +201,8 @@ minutes and prints a route table when it succeeds.
 > **If the build is killed** (exit code 137, "Killed", or it dies with no
 > message) you hit the memory limit. Build on your own machine instead:
 > ```bash
-> NEXT_PUBLIC_SITE_URL=https://socialpully.hunainimpex.com \
-> NEXT_PUBLIC_API_BASE=https://socialpullybackend-production.up.railway.app \
+> NEXT_PUBLIC_SITE_URL=https://hunainimpex.com \
+> NEXT_PUBLIC_API_BASE=https://api.hunainimpex.com \
 > npm run build
 > ```
 > then upload the resulting `.next/` directory into the application root on the
@@ -200,7 +222,7 @@ mkdir -p tmp && touch tmp/restart.txt
 
 Passenger picks up `tmp/restart.txt` on the next request and reloads.
 
-Visit `https://socialpully.hunainimpex.com`. You should get the homepage.
+Visit `https://hunainimpex.com`. You should get the homepage.
 
 ---
 
@@ -214,9 +236,9 @@ your service → **Variables**:
 | --- | --- |
 | `SECRET_KEY` | a fresh random key (see below) |
 | `DEBUG` | `False` |
-| `ALLOWED_HOSTS` | `socialpullybackend-production.up.railway.app` |
-| `CORS_ALLOWED_ORIGINS` | `https://socialpully.hunainimpex.com` |
-| `CSRF_TRUSTED_ORIGINS` | `https://socialpullybackend-production.up.railway.app` |
+| `ALLOWED_HOSTS` | `api.hunainimpex.com` |
+| `CORS_ALLOWED_ORIGINS` | `https://hunainimpex.com` |
+| `CSRF_TRUSTED_ORIGINS` | `https://api.hunainimpex.com` |
 | `DATABASE_URL` | provided by the Railway Postgres plugin |
 
 Generate the secret key with:
@@ -238,23 +260,23 @@ Redeploy the Railway service so the variables take effect.
 
 ```bash
 # Frontend serves and canonicals point at the subdomain
-curl -s https://socialpully.hunainimpex.com | grep canonical
+curl -s https://hunainimpex.com | grep canonical
 
 # Sitemap and robots carry the new host
-curl -s https://socialpully.hunainimpex.com/sitemap.xml | head -20
-curl -s https://socialpully.hunainimpex.com/robots.txt
+curl -s https://hunainimpex.com/sitemap.xml | head -20
+curl -s https://hunainimpex.com/robots.txt
 
 # Redirects work (expect 308)
-curl -sI https://socialpully.hunainimpex.com/ig | head -3
+curl -sI https://hunainimpex.com/ig | head -3
 
-# Backend reachable and CORS allows the subdomain
-curl -s https://socialpullybackend-production.up.railway.app/api/health/
+# Backend reachable
+curl -s https://api.hunainimpex.com/api/health/
 ```
 
 Then open the site in a browser, paste a video URL, and watch the Network tab:
 the request to `/api/info/` must return 200 with no CORS error in the console.
 
-Finally, in Google Search Console add `socialpully.hunainimpex.com` as a
+Finally, in Google Search Console add `hunainimpex.com` as a
 property and submit `sitemap.xml`.
 
 ---
@@ -287,6 +309,9 @@ value — restarting alone will not pick it up.
 | CORS error in browser console | `CORS_ALLOWED_ORIGINS` doesn't match | Must be the exact origin including `https://`, no trailing slash |
 | Downloads fail, console shows mixed content | Subdomain not on HTTPS | Run AutoSSL (step 2) |
 | Canonical tags show the wrong domain | `NEXT_PUBLIC_SITE_URL` unset at build time | Fix `.env.production`, then **rebuild** |
+| The old business site is gone from `hunainimpex.com` | Expected — the Node app now owns the apex | Restore from the `public_html` backup and move the app to a subdomain |
+| `api.hunainimpex.com` serves the frontend, or 500s | Its document root sits inside `public_html`, inheriting the apex's Passenger config | Recreate it with a document root outside `public_html` — see B2.1 |
+| `www.hunainimpex.com` serves a duplicate of the site | www redirect missing | Add the rewrite from step 1b, above cPanel's block in `public_html/.htaccess` |
 | First request after idle is slow | Passenger stops idle apps | Normal on shared hosting; a cron hitting the site every few minutes keeps it warm |
 
 ---
@@ -295,7 +320,7 @@ value — restarting alone will not pick it up.
 
 # Part B — Backend (Django API)
 
-You have two ways to put the API on `socialpully-api.hunainimpex.com`. They
+You have two ways to put the API on `api.hunainimpex.com`. They
 differ in where the work actually runs.
 
 ## B1 — Point the subdomain at Railway (recommended)
@@ -304,10 +329,10 @@ Keep Django running on Railway and give it your branded hostname. You get the
 domain you want without inheriting shared hosting's limits.
 
 1. Railway → your service → **Settings → Networking → Custom Domain** → add
-   `socialpully-api.hunainimpex.com`. Railway shows a CNAME target.
+   `api.hunainimpex.com`. Railway shows a CNAME target.
 2. cPanel → **Domains → Zone Editor** for `hunainimpex.com` → **Add Record**:
    - Type: `CNAME`
-   - Name: `socialpully-api`
+   - Name: `api`
    - Record: the target Railway gave you
 3. Do **not** create a cPanel subdomain for this name — a CNAME and a local
    docroot for the same host conflict, and cPanel will answer instead of Railway.
@@ -315,9 +340,9 @@ domain you want without inheriting shared hosting's limits.
 
    | Variable | Value |
    | --- | --- |
-   | `ALLOWED_HOSTS` | `socialpully-api.hunainimpex.com` |
-   | `CSRF_TRUSTED_ORIGINS` | `https://socialpully-api.hunainimpex.com` |
-   | `CORS_ALLOWED_ORIGINS` | `https://socialpully.hunainimpex.com` |
+   | `ALLOWED_HOSTS` | `api.hunainimpex.com` |
+   | `CSRF_TRUSTED_ORIGINS` | `https://api.hunainimpex.com` |
+   | `CORS_ALLOWED_ORIGINS` | `https://hunainimpex.com` |
 
 Railway issues the TLS certificate itself. Nothing else changes.
 
@@ -331,7 +356,18 @@ of this part before committing to it.
 
 ### B2.1 Create the subdomain and certificate
 
-Same as frontend steps 01–02, for `socialpully-api.hunainimpex.com`.
+cPanel → **Domains → Create A New Domain** → `api.hunainimpex.com`.
+
+> **Change the document root away from the default.** cPanel proposes
+> `/home/USER/public_html/api`. Do not accept it. Once the frontend owns the
+> apex, `public_html/.htaccess` carries `PassengerBaseURI "/"`, and Apache
+> applies that to every directory beneath it — including a subdomain rooted
+> there. You get two Passenger apps fighting over the same tree, which fails in
+> confusing ways.
+>
+> Set it to `/home/USER/api.hunainimpex.com` instead, outside `public_html`.
+
+Then run AutoSSL for the new subdomain (frontend step 02).
 
 ### B2.2 Create the MySQL database
 
@@ -353,7 +389,7 @@ cPanel → **Software → Setup Python App** → **Create Application**
 | --- | --- |
 | Python version | 3.11 or newer (Django 5.2 requires 3.10+) |
 | Application root | `repos/socialpully/backend/video_downloader` |
-| Application URL | `socialpully-api.hunainimpex.com` |
+| Application URL | `api.hunainimpex.com` |
 | Application startup file | `passenger_wsgi.py` |
 | Application Entry point | `application` |
 
@@ -380,9 +416,9 @@ Django's MySQL backend works with no further changes.
 cat > .env <<'EOF'
 SECRET_KEY=paste-a-generated-key-here
 DEBUG=False
-ALLOWED_HOSTS=socialpully-api.hunainimpex.com
-CORS_ALLOWED_ORIGINS=https://socialpully.hunainimpex.com
-CSRF_TRUSTED_ORIGINS=https://socialpully-api.hunainimpex.com
+ALLOWED_HOSTS=api.hunainimpex.com
+CORS_ALLOWED_ORIGINS=https://hunainimpex.com
+CSRF_TRUSTED_ORIGINS=https://api.hunainimpex.com
 DATABASE_URL=mysql://USER_dbuser:PASSWORD@localhost:3306/USER_socialpully
 EOF
 chmod 600 .env
@@ -411,7 +447,7 @@ python manage.py collectstatic --noinput
 Click **Restart** in Setup Python App, then:
 
 ```bash
-curl -s https://socialpully-api.hunainimpex.com/api/health/
+curl -s https://api.hunainimpex.com/api/health/
 ```
 
 You should get JSON including `yt_dlp_version`. Note whether

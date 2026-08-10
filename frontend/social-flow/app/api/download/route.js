@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const API_BASE = (
-  process.env.NEXT_PUBLIC_API_BASE || 'https://socialpullybackend-production.up.railway.app'
+  process.env.NEXT_PUBLIC_API_BASE || 'https://api.hunainimpex.com'
 ).replace(/\/$/, '');
 
 export async function POST(request) {
