@@ -318,6 +318,7 @@ value — restarting alone will not pick it up.
 | `Module not found: Can't resolve '@/lib/...'` | `NODE_ENV=production` (cPanel's Production app mode) made `npm ci` skip `devDependencies`, including `typescript`, which Next needs to read the `@/*` alias | `rm -rf node_modules .next && npm ci --include=dev && npm run build` |
 | `spawn .../bin/node EAGAIN` during "Collecting page data" | CloudLinux's per-account process (`nproc`/LVE) cap — Next's default build workers are forked as separate OS processes and exceed it | Already handled: `next.config.js` sets `experimental.cpus: 1` and `workerThreads: true`, which uses in-process threads instead of forked processes. Pull the latest commit if you hit this on an older checkout. |
 | `TypeError: Failed to parse URL from http://localhost:undefined?...&method=revalidateTag` printed during "Generating static pages" | A known cosmetic Next.js 14.2.x quirk triggered by having a Route Handler (`app/api/download/route.js`) — an internal cache-invalidation call fires during static generation before it has a real port to call | Harmless — ignore it. The build still finishes and produces the full route table below it. |
+| `/api/info/` returns 500, `"Requested content is not available, rate-limit reached or login required"` | Instagram rejecting an unauthenticated request — not a deployment issue, and unrelated to CORS even if the error looks similar | See B2.9 — add a cookies file. Other platforms don't need this. |
 | Pages load but no styling | Build ran before `npm ci` finished, or partial upload | `rm -rf .next && npm run build`, restart |
 | CORS error in browser console | `CORS_ALLOWED_ORIGINS` doesn't match | Must be the exact origin including `https://`, no trailing slash |
 | Downloads fail, console shows mixed content | Subdomain not on HTTPS | Run AutoSSL (step 2) |
@@ -503,6 +504,43 @@ python manage.py cleanup_downloads --hours 6 --dry-run
 
 It deletes files older than the cutoff and marks the matching database rows as
 `expired`, so `/api/file/<id>/` stops pointing at files that are gone.
+
+### B2.9 Instagram cookies (optional, but Instagram needs it)
+
+Instagram rejects most requests without an authenticated session — you'll see
+`"Requested content is not available, rate-limit reached or login required"`
+from `/api/info/`. This isn't a deployment bug; it's Instagram's own
+restriction, and it applies regardless of where the API is hosted. Other
+platforms (YouTube, TikTok, Facebook, Twitter/X, Pinterest) don't need this.
+
+> **Use a secondary/throwaway Instagram account for this, not your main
+> one.** Exporting and using session cookies this way is against Instagram's
+> ToS for that account, and accounts used for scraping can get flagged or
+> restricted. The app reads the cookies file if present and works exactly as
+> it did before if you skip this section entirely — it's optional.
+
+1. Log into the throwaway account in a desktop browser.
+2. Install a cookie-export extension — e.g. "Get cookies.txt LOCALLY" for
+   Chrome/Firefox — and export cookies for `instagram.com` in Netscape format.
+3. Upload the resulting file to the server as
+   `~/api.hunainimpex.com/cookies.txt` (cPanel File Manager, or `scp`).
+4. Restrict it and restart:
+   ```bash
+   chmod 600 ~/api.hunainimpex.com/cookies.txt
+   touch ~/api.hunainimpex.com/tmp/restart.txt
+   ```
+
+No `.env` change needed — `YTDLP_COOKIES_FILE` defaults to `cookies.txt` in
+the project root, which is exactly where this puts it. Verify:
+
+```bash
+curl -si -X POST https://api.hunainimpex.com/api/info/ \
+  -H "Content-Type: application/json" \
+  -d '{"url":"<an instagram reel/post url>"}'
+```
+
+Cookies expire — when Instagram starts rejecting requests again after a
+period of working, re-export and re-upload.
 
 ### What actually breaks on shared hosting
 

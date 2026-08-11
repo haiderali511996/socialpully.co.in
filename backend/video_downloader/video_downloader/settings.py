@@ -169,4 +169,9 @@ YTDLP_TIKTOK_API_HOSTNAMES = [
     "api16-normal-c-useast1a.tiktokv.com",
 ]
 
-#
+# Optional Netscape-format cookies file, exported from a browser logged into
+# a real account. Instagram (and increasingly other platforms) reject most
+# requests without an authenticated session; yt-dlp uses this when present
+# and downloads work anonymously as before when it's absent. Never commit an
+# actual cookies file — see backend/video_downloader/.gitignore.
+YTDLP_COOKIES_FILE = os.environ.get('YTDLP_COOKIES_FILE', str(BASE_DIR / 'cookies.txt'))

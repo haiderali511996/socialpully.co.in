@@ -30,6 +30,19 @@ def absolute_url(request, path: str) -> str:
     return request.build_absolute_uri(path)
 
 
+def cookie_opts() -> dict:
+    """yt-dlp cookiefile kwarg, only when the configured file actually exists.
+
+    Lets an operator drop in browser-exported cookies (settings.YTDLP_COOKIES_FILE)
+    to authenticate with sites that reject anonymous requests, without changing
+    behavior at all when no such file is present.
+    """
+    path = getattr(settings, 'YTDLP_COOKIES_FILE', None)
+    if path and os.path.exists(path):
+        return {'cookiefile': path}
+    return {}
+
+
 def is_tiktok_url(url: str) -> bool:
     u = (url or "").lower()
     return "tiktok.com" in u or "vm.tiktok.com" in u or "vt.tiktok.com" in u
@@ -193,11 +206,12 @@ class VideoInfoView(APIView):
             'extract_flat': False,
             'nocheckcertificate': True,
         }
-        
+        ydl_opts.update(cookie_opts())
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                
+
                 # Extract available formats
                 formats = []
                 if 'formats' in info:
@@ -264,6 +278,7 @@ class TikTokStreamView(APIView):
                 "nocheckcertificate": True,
                 "http_headers": TIKTOK_HTTP_HEADERS,
             }
+            ydl_opts.update(cookie_opts())
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_download.url, download=False)
@@ -318,14 +333,15 @@ class DownloadVideoView(APIView):
             'nocheckcertificate': True,
             'ignoreerrors': False,
         }
-        
+        ydl_opts.update(cookie_opts())
+
         # Add FFmpeg location and merge format if available
         if has_ffmpeg:
             ydl_opts['merge_output_format'] = video_format
             if ffmpeg_location:
                 ydl_opts['ffmpeg_location'] = ffmpeg_location
                 print(f"Using FFmpeg from: {ffmpeg_location}")
-        
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 # Get info first
@@ -456,11 +472,12 @@ class DirectURLView(APIView):
             'no_warnings': True,
             'nocheckcertificate': True,
         }
-        
+        ydl_opts.update(cookie_opts())
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                
+
                 # Get the direct URL
                 if 'url' in info:
                     direct_url = info['url']
@@ -509,6 +526,7 @@ class DownloadAudioView(APIView):
                 "nocheckcertificate": True,
                 "http_headers": TIKTOK_HTTP_HEADERS,
             }
+            ydl_opts.update(cookie_opts())
 
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -584,7 +602,8 @@ class DownloadAudioView(APIView):
         else:
             # Without FFmpeg, download in original format
             ydl_opts['format'] = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best'
-        
+        ydl_opts.update(cookie_opts())
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
