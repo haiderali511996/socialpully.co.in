@@ -24,7 +24,13 @@ django-celery-results==2.6.0
 
 # Video extraction
 yt-dlp==2025.12.8
-curl_cffi==0.7.3
+# Powers browser-impersonation (settings.YTDLP_ENABLE_IMPERSONATION), which
+# makes yt-dlp's requests carry a real Chrome TLS/HTTP fingerprint instead of
+# Python's default one. 0.7.3 (the previous pin) is NOT supported by yt-dlp
+# 2025.12.8 -- confirmed it raises "Only curl_cffi versions 0.5.10, 0.10.x,
+# 0.11.x, 0.12.x, 0.13.x are supported" at import time, silently disabling
+# impersonation. 0.13.0 is the newest version in that supported range.
+curl_cffi==0.13.0
 pycryptodome==3.23.0
 requests==2.32.5
 

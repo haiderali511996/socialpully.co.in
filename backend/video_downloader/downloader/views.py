@@ -8,6 +8,7 @@ import os
 import time
 import shutil
 import subprocess
+import functools
 from django.http import StreamingHttpResponse
 from django.core.cache import cache
 import requests
@@ -41,6 +42,43 @@ def cookie_opts() -> dict:
     if path and os.path.exists(path):
         return {'cookiefile': path}
     return {}
+
+
+@functools.lru_cache(maxsize=1)
+def _impersonate_target():
+    """Resolve settings.YTDLP_IMPERSONATE_TARGET to a usable ImpersonateTarget,
+    or None if impersonation is disabled, misconfigured, or the curl_cffi
+    dependency isn't installed. Computed once per process -- probing
+    availability constructs a throwaway YoutubeDL instance, too expensive to
+    repeat on every request.
+    """
+    if not getattr(settings, 'YTDLP_ENABLE_IMPERSONATION', False):
+        return None
+    target_name = getattr(settings, 'YTDLP_IMPERSONATE_TARGET', None)
+    if not target_name:
+        return None
+    try:
+        from yt_dlp.networking.impersonate import ImpersonateTarget
+        target = ImpersonateTarget.from_str(target_name)
+        with yt_dlp.YoutubeDL({'quiet': True}) as probe:
+            # Uses a private yt-dlp method since there's no public API for
+            # this check; falls back to no impersonation (via the except
+            # below) if a future yt-dlp version removes it.
+            if not probe._impersonate_target_available(target):
+                return None
+        return target
+    except Exception:
+        return None
+
+
+def impersonate_opts() -> dict:
+    """yt-dlp impersonate kwarg -- makes outbound requests carry a real
+    browser's TLS/HTTP fingerprint instead of Python's default one, which
+    some CDNs use to distinguish genuine playback from scripted downloads.
+    A no-op if disabled in settings or curl_cffi isn't installed/compatible.
+    """
+    target = _impersonate_target()
+    return {'impersonate': target} if target else {}
 
 
 def is_tiktok_url(url: str) -> bool:
@@ -218,6 +256,7 @@ class VideoInfoView(APIView):
         }
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
+        ydl_opts.update(impersonate_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -291,6 +330,7 @@ class TikTokStreamView(APIView):
             }
             ydl_opts.update(cookie_opts())
             ydl_opts['noplaylist'] = True
+            ydl_opts.update(impersonate_opts())
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_download.url, download=False)
@@ -347,6 +387,7 @@ class DownloadVideoView(APIView):
         }
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
+        ydl_opts.update(impersonate_opts())
 
         # Add FFmpeg location and merge format if available
         if has_ffmpeg:
@@ -496,6 +537,7 @@ class DirectURLView(APIView):
         }
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
+        ydl_opts.update(impersonate_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -551,6 +593,7 @@ class DownloadAudioView(APIView):
             }
             ydl_opts.update(cookie_opts())
             ydl_opts['noplaylist'] = True
+            ydl_opts.update(impersonate_opts())
 
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -628,6 +671,7 @@ class DownloadAudioView(APIView):
             ydl_opts['format'] = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best'
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
+        ydl_opts.update(impersonate_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
