@@ -65,6 +65,16 @@ const nextConfig = {
   
   // Optimize production build
   productionBrowserSourceMaps: false,
+
+  // Shared hosting (cPanel/CloudLinux) caps the number of processes an
+  // account may run at once. Next's default build workers are forked as
+  // separate OS processes and can exceed that cap, failing with
+  // "spawn ... EAGAIN". Threads don't count against that limit the same way,
+  // and capping to 1 avoids spawning a worker pool at all.
+  experimental: {
+    cpus: 1,
+    workerThreads: true,
+  },
 };
 
 module.exports = withBundleAnalyzer(nextConfig);

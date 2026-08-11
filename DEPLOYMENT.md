@@ -316,6 +316,7 @@ value — restarting alone will not pick it up.
 | `Could not find a production build` | `.next` missing | Run `npm run build` in the application root |
 | Build exits 137 / "Killed" | Memory limit | Build locally, upload `.next` (step 5b) |
 | `Module not found: Can't resolve '@/lib/...'` | `NODE_ENV=production` (cPanel's Production app mode) made `npm ci` skip `devDependencies`, including `typescript`, which Next needs to read the `@/*` alias | `rm -rf node_modules .next && npm ci --include=dev && npm run build` |
+| `spawn .../bin/node EAGAIN` during "Collecting page data" | CloudLinux's per-account process (`nproc`/LVE) cap — Next's default build workers are forked as separate OS processes and exceed it | Already handled: `next.config.js` sets `experimental.cpus: 1` and `workerThreads: true`, which uses in-process threads instead of forked processes. Pull the latest commit if you hit this on an older checkout. |
 | Pages load but no styling | Build ran before `npm ci` finished, or partial upload | `rm -rf .next && npm run build`, restart |
 | CORS error in browser console | `CORS_ALLOWED_ORIGINS` doesn't match | Must be the exact origin including `https://`, no trailing slash |
 | Downloads fail, console shows mixed content | Subdomain not on HTTPS | Run AutoSSL (step 2) |
