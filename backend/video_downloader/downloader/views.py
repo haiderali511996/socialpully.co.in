@@ -96,6 +96,64 @@ def js_runtime_opts() -> dict:
     return {}
 
 
+# Maps a substring of yt-dlp's raw error text to something a visitor can act
+# on. Order matters: the first match wins, so put specific patterns above
+# general ones. The raw text is still returned in the response's `details`
+# field for debugging -- this only replaces what the UI puts in front of
+# people, which otherwise reads as "this site is broken" when in fact the
+# platform declined to serve us.
+_ERROR_PATTERNS = [
+    (('sign in to confirm', 'not a bot', 'confirm you’re not a bot'),
+     'This platform is currently blocking automated requests from our server. '
+     'This is a restriction on their side, not a problem with your link. '
+     'Please try again later.'),
+    (('age-restricted', 'age restricted', 'confirm your age', 'inappropriate for some users'),
+     'This video is age-restricted and can only be viewed by signing in on the '
+     'original platform, so it cannot be downloaded here.'),
+    (('rate-limit reached or login required', 'login required', 'requires login',
+      'you must be logged in', 'private video', 'this video is private'),
+     'This content is private or requires signing in on the original platform, '
+     'so it cannot be downloaded.'),
+    (('video unavailable', 'has been removed', 'no longer available',
+      'account has been terminated', 'this video has been removed'),
+     'This video is no longer available. It may have been deleted or made private.'),
+    (('not available in your country', 'not available from your location',
+      'geo restriction', 'geo-restricted', 'blocked it in your country'),
+     'This content is not available in our server’s region.'),
+    (('no video could be found', 'there is no video', 'no media found',
+      'unable to extract video'),
+     'No downloadable video was found at that link. Double-check that the post '
+     'actually contains a video.'),
+    (('downloaded file is empty',),
+     'The platform accepted our request but refused to send the video file. '
+     'This usually means it is blocking downloads from our server.'),
+    (('requested format is not available',),
+     'This video is not available in a downloadable format. Try a different '
+     'quality setting.'),
+    (('unsupported url', 'no suitable extractor', 'is not a valid url'),
+     'That link is not from a supported site, or is not a direct link to a video.'),
+    (('http error 429', 'too many requests'),
+     'Too many requests have been made recently. Please wait a few minutes and '
+     'try again.'),
+    (('http error 404',),
+     'That link could not be found. Please check the URL and try again.'),
+]
+
+
+def friendly_error(exc, fallback: str) -> str:
+    """Translate a yt-dlp exception into something worth showing a visitor.
+
+    Falls back to the caller's generic message when nothing matches, so an
+    unrecognised failure still reads sensibly rather than leaking a stack of
+    yt-dlp internals into the UI.
+    """
+    text = str(exc).lower()
+    for needles, message in _ERROR_PATTERNS:
+        if any(needle in text for needle in needles):
+            return message
+    return fallback
+
+
 def is_tiktok_url(url: str) -> bool:
     u = (url or "").lower()
     return "tiktok.com" in u or "vm.tiktok.com" in u or "vt.tiktok.com" in u
@@ -316,7 +374,7 @@ class VideoInfoView(APIView):
         except Exception as e:
             return Response({
                 'success': False,
-                'error': 'Failed to fetch video information',
+                'error': friendly_error(e, 'Failed to fetch video information'),
                 'details': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -355,7 +413,7 @@ class TikTokStreamView(APIView):
             except Exception as e:
                 return Response({
                     'success': False,
-                    'error': 'Stream link expired and could not be refreshed',
+                    'error': friendly_error(e, 'Stream link expired and could not be refreshed'),
                     'details': str(e),
                 }, status=status.HTTP_502_BAD_GATEWAY)
 
@@ -520,7 +578,7 @@ class DownloadVideoView(APIView):
             
             return Response({
                 'success': False,
-                'error': 'Failed to download video',
+                'error': friendly_error(e, 'Failed to download video'),
                 'details': error_message
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -582,7 +640,7 @@ class DirectURLView(APIView):
         except Exception as e:
             return Response({
                 'success': False,
-                'error': 'Failed to get direct URL',
+                'error': friendly_error(e, 'Failed to get direct URL'),
                 'details': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -622,7 +680,7 @@ class DownloadAudioView(APIView):
             except Exception as e:
                 return Response({
                     'success': False,
-                    'error': 'Failed to fetch TikTok video',
+                    'error': friendly_error(e, 'Failed to fetch TikTok video'),
                     'details': str(e),
                 }, status=status.HTTP_502_BAD_GATEWAY)
 
@@ -762,7 +820,7 @@ class DownloadAudioView(APIView):
             
             return Response({
                 'success': False,
-                'error': 'Failed to download audio',
+                'error': friendly_error(e, 'Failed to download audio'),
                 'details': error_message
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
