@@ -191,12 +191,22 @@ EOF
 ### 5b. Install and build
 
 ```bash
-npm ci
+npm ci --include=dev
 npm run build
 ```
 
 `npm ci` needs `package-lock.json`, which is committed. The build takes a few
 minutes and prints a route table when it succeeds.
+
+> **`--include=dev` is required, not optional.** cPanel's "Production"
+> application mode sets `NODE_ENV=production`, and `npm ci` respects that by
+> skipping everything in `devDependencies` — which includes `typescript`,
+> `tailwindcss`, `postcss`, and `eslint-config-next`. Without `typescript`
+> installed, Next.js can't read the `@/*` path alias in `tsconfig.json`, and
+> the build fails with `Module not found: Can't resolve '@/lib/...'` for
+> every import that uses it. None of these packages are needed once the app
+> is running — only for this build step — so there's no downside to
+> installing them regardless of `NODE_ENV`.
 
 > **If the build is killed** (exit code 137, "Killed", or it dies with no
 > message) you hit the memory limit. Build on your own machine instead:
@@ -287,7 +297,7 @@ property and submit `sitemap.xml`.
 source /home/USER/nodevenv/repos/socialpully/frontend/social-flow/20/bin/activate \
   && cd /home/USER/repos/socialpully/frontend/social-flow
 git pull
-npm ci
+npm ci --include=dev
 npm run build
 touch tmp/restart.txt
 ```
@@ -305,6 +315,8 @@ value — restarting alone will not pick it up.
 | `Error: Cannot find module 'next'` | `npm ci` ran outside the Node virtualenv | Re-run the `source ...` command from step 4 first |
 | `Could not find a production build` | `.next` missing | Run `npm run build` in the application root |
 | Build exits 137 / "Killed" | Memory limit | Build locally, upload `.next` (step 5b) |
+| `Module not found: Can't resolve '@/lib/...'` | `NODE_ENV=production` (cPanel's Production app mode) made `npm ci` skip `devDependencies`, including `typescript`, which Next needs to read the `@/*` alias | `rm -rf node_modules .next && npm ci --include=dev && npm run build` |
+| `spawn .../bin/node EAGAIN` during "Collecting page data" | CloudLinux's per-account process (`nproc`/LVE) cap — Next's default build workers are forked as separate OS processes and exceed it | Already handled: `next.config.js` sets `experimental.cpus: 1` and `workerThreads: true`, which uses in-process threads instead of forked processes. Pull the latest commit if you hit this on an older checkout. |
 | Pages load but no styling | Build ran before `npm ci` finished, or partial upload | `rm -rf .next && npm run build`, restart |
 | CORS error in browser console | `CORS_ALLOWED_ORIGINS` doesn't match | Must be the exact origin including `https://`, no trailing slash |
 | Downloads fail, console shows mixed content | Subdomain not on HTTPS | Run AutoSSL (step 2) |
@@ -387,11 +399,26 @@ cPanel → **Software → Setup Python App** → **Create Application**
 
 | Field | Value |
 | --- | --- |
-| Python version | 3.11 or newer (Django 5.2 requires 3.10+) |
+| Python version | 3.12 (anything 3.10+ works; Django 5.2 requires it) |
 | Application root | `repos/socialpully/backend/video_downloader` |
 | Application URL | `api.hunainimpex.com` |
 | Application startup file | `passenger_wsgi.py` |
 | Application Entry point | `application` |
+
+> **Clone the repo before you click Create.** cPanel creates the Application
+> root directory if it is missing, and a Python app pointed at an empty
+> directory fails to boot. Part A step 3 covers the clone; the directory
+> `repos/socialpully/backend/video_downloader` must already contain
+> `passenger_wsgi.py` and `manage.py`.
+>
+> Leave the path box next to the **Application URL** dropdown empty — that
+> serves the app at the root of the subdomain. Anything typed there becomes a
+> sub-path, so `/api/health/` would move to `/whatever/api/health/`.
+>
+> **Environment variables** can stay empty here. Step B2.5 writes them to a
+> `.env` file that `passenger_wsgi.py` reads, which keeps the database password
+> out of the cPanel UI and lets you `chmod 600` it. Using this panel instead
+> also works — real environment variables take precedence over the file.
 
 Copy the activation command cPanel prints at the top of the page.
 
@@ -463,7 +490,7 @@ A management command is committed for this. cPanel → **Advanced → Cron Jobs*
 every 6 hours:
 
 ```
-0 */6 * * * /home/USER/virtualenv/repos/socialpully/backend/video_downloader/3.11/bin/python /home/USER/repos/socialpully/backend/video_downloader/manage.py cleanup_downloads --hours 6
+0 */6 * * * /home/USER/virtualenv/repos/socialpully/backend/video_downloader/3.12/bin/python /home/USER/repos/socialpully/backend/video_downloader/manage.py cleanup_downloads --hours 6
 ```
 
 Use the interpreter path from your app's activation command. Check what it
