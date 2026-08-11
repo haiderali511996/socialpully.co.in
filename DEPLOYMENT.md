@@ -191,12 +191,22 @@ EOF
 ### 5b. Install and build
 
 ```bash
-npm ci
+npm ci --include=dev
 npm run build
 ```
 
 `npm ci` needs `package-lock.json`, which is committed. The build takes a few
 minutes and prints a route table when it succeeds.
+
+> **`--include=dev` is required, not optional.** cPanel's "Production"
+> application mode sets `NODE_ENV=production`, and `npm ci` respects that by
+> skipping everything in `devDependencies` — which includes `typescript`,
+> `tailwindcss`, `postcss`, and `eslint-config-next`. Without `typescript`
+> installed, Next.js can't read the `@/*` path alias in `tsconfig.json`, and
+> the build fails with `Module not found: Can't resolve '@/lib/...'` for
+> every import that uses it. None of these packages are needed once the app
+> is running — only for this build step — so there's no downside to
+> installing them regardless of `NODE_ENV`.
 
 > **If the build is killed** (exit code 137, "Killed", or it dies with no
 > message) you hit the memory limit. Build on your own machine instead:
@@ -287,7 +297,7 @@ property and submit `sitemap.xml`.
 source /home/USER/nodevenv/repos/socialpully/frontend/social-flow/20/bin/activate \
   && cd /home/USER/repos/socialpully/frontend/social-flow
 git pull
-npm ci
+npm ci --include=dev
 npm run build
 touch tmp/restart.txt
 ```
@@ -305,6 +315,7 @@ value — restarting alone will not pick it up.
 | `Error: Cannot find module 'next'` | `npm ci` ran outside the Node virtualenv | Re-run the `source ...` command from step 4 first |
 | `Could not find a production build` | `.next` missing | Run `npm run build` in the application root |
 | Build exits 137 / "Killed" | Memory limit | Build locally, upload `.next` (step 5b) |
+| `Module not found: Can't resolve '@/lib/...'` | `NODE_ENV=production` (cPanel's Production app mode) made `npm ci` skip `devDependencies`, including `typescript`, which Next needs to read the `@/*` alias | `rm -rf node_modules .next && npm ci --include=dev && npm run build` |
 | Pages load but no styling | Build ran before `npm ci` finished, or partial upload | `rm -rf .next && npm run build`, restart |
 | CORS error in browser console | `CORS_ALLOWED_ORIGINS` doesn't match | Must be the exact origin including `https://`, no trailing slash |
 | Downloads fail, console shows mixed content | Subdomain not on HTTPS | Run AutoSSL (step 2) |
