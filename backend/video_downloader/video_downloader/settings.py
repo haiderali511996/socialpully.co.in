@@ -175,3 +175,12 @@ YTDLP_TIKTOK_API_HOSTNAMES = [
 # and downloads work anonymously as before when it's absent. Never commit an
 # actual cookies file — see backend/video_downloader/.gitignore.
 YTDLP_COOKIES_FILE = os.environ.get('YTDLP_COOKIES_FILE', str(BASE_DIR / 'cookies.txt'))
+
+# Optional path to a Deno binary. YouTube increasingly requires computing a
+# token via JavaScript to authorize actual video downloads (separate from
+# the cookie-based bot-check) — without a JS runtime available, requests can
+# succeed for metadata but come back with "The downloaded file is empty" for
+# the actual video. Deno is a single self-contained executable (no root or
+# compiler needed); see DEPLOYMENT.md for the install steps. Absent, yt-dlp
+# falls back to its previous behavior.
+YTDLP_DENO_PATH = os.environ.get('YTDLP_DENO_PATH', os.path.expanduser('~/.deno/bin/deno'))

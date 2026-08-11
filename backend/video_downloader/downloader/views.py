@@ -81,6 +81,21 @@ def impersonate_opts() -> dict:
     return {'impersonate': target} if target else {}
 
 
+def js_runtime_opts() -> dict:
+    """yt-dlp js_runtimes kwarg, pointing at a Deno binary when one exists
+    at settings.YTDLP_DENO_PATH. Sites (YouTube especially) increasingly
+    require computing a token via JavaScript to authorize actual video
+    downloads; without a JS runtime available, requests can succeed for
+    metadata but come back empty for the download itself. A no-op -- yt-dlp
+    falls back to its own default runtime search -- when no binary is found
+    there.
+    """
+    path = getattr(settings, 'YTDLP_DENO_PATH', None)
+    if path and os.path.exists(path):
+        return {'js_runtimes': {'deno': {'path': path}}}
+    return {}
+
+
 def is_tiktok_url(url: str) -> bool:
     u = (url or "").lower()
     return "tiktok.com" in u or "vm.tiktok.com" in u or "vt.tiktok.com" in u
@@ -257,6 +272,7 @@ class VideoInfoView(APIView):
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
+        ydl_opts.update(js_runtime_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -331,6 +347,7 @@ class TikTokStreamView(APIView):
             ydl_opts.update(cookie_opts())
             ydl_opts['noplaylist'] = True
             ydl_opts.update(impersonate_opts())
+            ydl_opts.update(js_runtime_opts())
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_download.url, download=False)
@@ -388,6 +405,7 @@ class DownloadVideoView(APIView):
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
+        ydl_opts.update(js_runtime_opts())
 
         # Add FFmpeg location and merge format if available
         if has_ffmpeg:
@@ -538,6 +556,7 @@ class DirectURLView(APIView):
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
+        ydl_opts.update(js_runtime_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -594,6 +613,7 @@ class DownloadAudioView(APIView):
             ydl_opts.update(cookie_opts())
             ydl_opts['noplaylist'] = True
             ydl_opts.update(impersonate_opts())
+            ydl_opts.update(js_runtime_opts())
 
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -672,6 +692,7 @@ class DownloadAudioView(APIView):
         ydl_opts.update(cookie_opts())
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
+        ydl_opts.update(js_runtime_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

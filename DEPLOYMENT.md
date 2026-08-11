@@ -542,6 +542,77 @@ curl -si -X POST https://api.hunainimpex.com/api/info/ \
 Cookies expire — when Instagram starts rejecting requests again after a
 period of working, re-export and re-upload.
 
+### B2.10 YouTube: browser impersonation and a JS runtime (optional)
+
+Two more YouTube-specific failure modes, both fixable without root:
+
+**`"Sign in to confirm you're not a bot"`** — same fix as Instagram: add
+YouTube cookies to the same `cookies.txt` (B2.9). Netscape cookie files
+support multiple domains in one file, so this doesn't need a second file —
+merge rather than overwrite:
+
+```bash
+cp ~/api.hunainimpex.com/cookies.txt ~/api.hunainimpex.com/cookies.txt.bak
+cat ~/api.hunainimpex.com/cookies.txt.bak youtube_cookies.txt > ~/api.hunainimpex.com/cookies.txt
+chmod 600 ~/api.hunainimpex.com/cookies.txt
+```
+
+**`"ERROR: The downloaded file is empty"`** (info-fetch succeeds, cookies
+present, only the actual download fails) — this is a different mechanism:
+YouTube's CDN can accept an authenticated request and still serve empty
+content when it detects the request isn't coming from a real browser. Two
+independent layers address this, both already wired into the app and both
+safe no-ops if left unconfigured:
+
+1. **Browser impersonation** (`settings.YTDLP_ENABLE_IMPERSONATION`) — makes
+   yt-dlp's requests carry a real Chrome TLS/HTTP fingerprint via `curl_cffi`.
+   Already enabled by default; just needs the dependency:
+   ```bash
+   pip install "curl_cffi==0.13.0"
+   ```
+   > The version matters: `curl_cffi==0.7.3` (an earlier default) is **not**
+   > supported by `yt-dlp==2025.12.8` and silently disables impersonation.
+   > `0.13.0` is the newest version yt-dlp actually supports for this pin.
+   > This compiles a C extension — if it fails to install, the app keeps
+   > working exactly as before; impersonation just stays off.
+
+2. **A JavaScript runtime** — YouTube increasingly requires computing a
+   token via JavaScript to authorize the actual video bytes (separate from
+   the cookie-based bot-check). Without one, requests can succeed for
+   metadata and still come back empty for the download. Deno is a single
+   self-contained binary — no root, no compiler:
+   ```bash
+   curl -fsSL https://deno.land/install.sh | sh
+   ```
+   Installs to `~/.deno/bin/deno`, which is exactly where
+   `settings.YTDLP_DENO_PATH` looks by default — no further config needed.
+
+After either step:
+
+```bash
+touch ~/api.hunainimpex.com/tmp/restart.txt
+```
+
+```bash
+curl -si -X POST https://api.hunainimpex.com/api/download/ \
+  -H "Content-Type: application/json" \
+  -d '{"url":"<a youtube video url>","quality":"best","format":"mp4"}'
+```
+
+Verify what actually took effect:
+
+```bash
+python manage.py shell -c "
+from downloader.views import impersonate_opts, js_runtime_opts
+print('impersonate:', impersonate_opts())
+print('js runtime:', js_runtime_opts())
+"
+```
+
+Both returning non-empty confirms the config is active — if a download still
+fails after that, YouTube's protections have moved again, which happens; this
+is an active, evolving fight without a permanent fix.
+
 ### What actually breaks on shared hosting
 
 None of these stop the app booting. They shape what it can do.
