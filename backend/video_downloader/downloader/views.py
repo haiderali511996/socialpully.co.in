@@ -143,12 +143,16 @@ def get_platform_specific_format(url, quality, has_ffmpeg):
         if has_ffmpeg:
             return 'best[ext=mp4]/best'
         else:
-            return 'best'
-    
+            # 'best' alone requires a single format with both audio and video;
+            # fall back to video-only (silent) rather than fail outright when
+            # a video is only offered as separate streams and there's no
+            # FFmpeg available to merge them.
+            return 'best/bestvideo'
+
     # Instagram-specific formats
     elif 'instagram.com' in url_lower:
-        return 'best[ext=mp4]/best'
-    
+        return 'best[ext=mp4]/best/bestvideo[ext=mp4]/bestvideo'
+
     # Twitter/X-specific formats
     elif 'twitter.com' in url_lower or 'x.com' in url_lower:
         if has_ffmpeg:
@@ -160,12 +164,14 @@ def get_platform_specific_format(url, quality, has_ffmpeg):
                 '360p': 'best[height<=360][ext=mp4]/best[height<=360]'
             }
         else:
+            # Same fallback as above: try a combined format first, then
+            # settle for video-only instead of failing.
             quality_map = {
-                'best': 'best',
-                '1080p': 'best[height<=1080]',
-                '720p': 'best[height<=720]',
-                '480p': 'best[height<=480]',
-                '360p': 'best[height<=360]'
+                'best': 'best/bestvideo',
+                '1080p': 'best[height<=1080]/bestvideo[height<=1080]',
+                '720p': 'best[height<=720]/bestvideo[height<=720]',
+                '480p': 'best[height<=480]/bestvideo[height<=480]',
+                '360p': 'best[height<=360]/bestvideo[height<=360]'
             }
         return quality_map.get(quality, quality_map['best'])
     
@@ -180,12 +186,16 @@ def get_platform_specific_format(url, quality, has_ffmpeg):
                 '360p': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[height<=360][ext=mp4]/best[height<=360]'
             }
         else:
+            # Sites like Pinterest only ever deliver video and audio as
+            # separate HLS streams — there is no combined format to pick,
+            # so 'best[ext=mp4]/best' alone fails outright. Fall back to
+            # video-only (silent) rather than error when that happens.
             quality_map = {
-                'best': 'best[ext=mp4]/best',
-                '1080p': 'best[height<=1080][ext=mp4]/best[height<=1080]',
-                '720p': 'best[height<=720][ext=mp4]/best[height<=720]',
-                '480p': 'best[height<=480][ext=mp4]/best[height<=480]',
-                '360p': 'best[height<=360][ext=mp4]/best[height<=360]'
+                'best': 'best[ext=mp4]/best/bestvideo[ext=mp4]/bestvideo',
+                '1080p': 'best[height<=1080][ext=mp4]/best[height<=1080]/bestvideo[height<=1080][ext=mp4]/bestvideo[height<=1080]',
+                '720p': 'best[height<=720][ext=mp4]/best[height<=720]/bestvideo[height<=720][ext=mp4]/bestvideo[height<=720]',
+                '480p': 'best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480][ext=mp4]/bestvideo[height<=480]',
+                '360p': 'best[height<=360][ext=mp4]/best[height<=360]/bestvideo[height<=360][ext=mp4]/bestvideo[height<=360]'
             }
         return quality_map.get(quality, quality_map['best'])
 
@@ -393,7 +403,14 @@ class DownloadVideoView(APIView):
                 
                 # Add warning if FFmpeg is not available
                 if not has_ffmpeg:
-                    response_data['warning'] = 'FFmpeg not installed. Video quality may be limited to pre-merged formats.'
+                    if info.get('acodec') in (None, 'none'):
+                        response_data['warning'] = (
+                            'This video has no audio track. The site only provides video and audio '
+                            'as separate streams, and merging them requires FFmpeg, which is not '
+                            'installed on this server.'
+                        )
+                    else:
+                        response_data['warning'] = 'FFmpeg not installed. Video quality may be limited to pre-merged formats.'
                 
                 return Response(response_data, status=status.HTTP_200_OK)
                 
@@ -457,13 +474,15 @@ class DirectURLView(APIView):
         url = serializer.validated_data['url']
         quality = serializer.validated_data['quality']
         
-        # Use simple format selection (no merging needed for direct URLs)
+        # Use simple format selection (no merging needed for direct URLs).
+        # Falls back to video-only when a site (e.g. Pinterest) only ever
+        # offers separate video/audio streams, rather than erroring out.
         quality_options = {
-            'best': 'best',
-            '1080p': 'best[height<=1080]',
-            '720p': 'best[height<=720]',
-            '480p': 'best[height<=480]',
-            '360p': 'best[height<=360]'
+            'best': 'best/bestvideo',
+            '1080p': 'best[height<=1080]/bestvideo[height<=1080]',
+            '720p': 'best[height<=720]/bestvideo[height<=720]',
+            '480p': 'best[height<=480]/bestvideo[height<=480]',
+            '360p': 'best[height<=360]/bestvideo[height<=360]'
         }
         
         ydl_opts = {
