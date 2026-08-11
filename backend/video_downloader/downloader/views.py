@@ -217,6 +217,7 @@ class VideoInfoView(APIView):
             'nocheckcertificate': True,
         }
         ydl_opts.update(cookie_opts())
+        ydl_opts['noplaylist'] = True
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -289,6 +290,7 @@ class TikTokStreamView(APIView):
                 "http_headers": TIKTOK_HTTP_HEADERS,
             }
             ydl_opts.update(cookie_opts())
+            ydl_opts['noplaylist'] = True
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_download.url, download=False)
@@ -344,6 +346,7 @@ class DownloadVideoView(APIView):
             'ignoreerrors': False,
         }
         ydl_opts.update(cookie_opts())
+        ydl_opts['noplaylist'] = True
 
         # Add FFmpeg location and merge format if available
         if has_ffmpeg:
@@ -492,6 +495,7 @@ class DirectURLView(APIView):
             'nocheckcertificate': True,
         }
         ydl_opts.update(cookie_opts())
+        ydl_opts['noplaylist'] = True
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -546,6 +550,7 @@ class DownloadAudioView(APIView):
                 "http_headers": TIKTOK_HTTP_HEADERS,
             }
             ydl_opts.update(cookie_opts())
+            ydl_opts['noplaylist'] = True
 
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -622,6 +627,7 @@ class DownloadAudioView(APIView):
             # Without FFmpeg, download in original format
             ydl_opts['format'] = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best'
         ydl_opts.update(cookie_opts())
+        ydl_opts['noplaylist'] = True
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
