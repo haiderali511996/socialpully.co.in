@@ -162,8 +162,13 @@ else:
 
 
 # yt-dlp settings
-YTDLP_ENABLE_IMPERSONATION = True
-YTDLP_IMPERSONATE_TARGET = "chrome"
+# Impersonation is env-toggleable because it is not universally a win: a cookie
+# session created in a real browser, replayed with curl_cffi's synthetic TLS
+# fingerprint from a datacenter IP, can read as *more* suspicious to some sites
+# than plain requests. Set YTDLP_ENABLE_IMPERSONATION=False to turn it off
+# without a code change (see the diagnose_ytdlp management command).
+YTDLP_ENABLE_IMPERSONATION = os.environ.get('YTDLP_ENABLE_IMPERSONATION', 'True') == 'True'
+YTDLP_IMPERSONATE_TARGET = os.environ.get('YTDLP_IMPERSONATE_TARGET', 'chrome')
 YTDLP_TIKTOK_API_HOSTNAMES = [
     "api-h2.tiktokv.com",
     "api16-normal-c-useast1a.tiktokv.com",
