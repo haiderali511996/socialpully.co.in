@@ -6,6 +6,34 @@ from django.core.management.utils import get_random_secret_key
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_dotenv(path):
+    """Minimal .env reader, applied before any setting is read below.
+
+    Deliberately dependency-free: shared hosting makes adding packages
+    awkward, and this only needs to handle KEY=value lines. Real environment
+    variables always win, so a host's own config UI overrides the file.
+
+    This lives in settings.py rather than in a single entry point so that
+    *every* way of starting Django picks it up -- passenger_wsgi, manage.py,
+    cron jobs, the shell. Loading it in only the WSGI entry point means
+    management commands silently run with different configuration than the
+    live site, which is how `manage.py migrate` ends up pointed at a
+    different database than the running app.
+    """
+    if not os.path.exists(path):
+        return
+    with open(path, encoding='utf-8') as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, _, value = line.partition('=')
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_dotenv(BASE_DIR / '.env')
+
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
