@@ -622,7 +622,40 @@ None of these stop the app booting. They shape what it can do.
 | **No ffmpeg** | `/api/health/` reports `ffmpeg_installed: false`. Merged high-quality YouTube downloads stop working; you get pre-merged formats only. The app degrades gracefully and says so in its response. Ask your host — some will install it. |
 | **Request timeouts** | Shared hosts usually cap requests at 60–120s. The app asks for 300s. Long videos get cut off mid-download. |
 | **Memory** | yt-dlp plus Django in one Passenger process is tight under a 1 GB LVE limit. Concurrent downloads are what push it over. |
-| **IP reputation** | TikTok and Instagram block many shared-hosting IP ranges. Testing this repo from a datacenter IP returns *"Your IP address is blocked from accessing this post."* This is the failure most likely to make the site look broken while everything is configured correctly. |
+| **IP reputation** | The single biggest limitation, and confirmed on this deployment — see below. Platforms block shared-hosting IP ranges wholesale. This is the failure most likely to make the site look broken while everything is configured correctly. |
+
+#### Confirmed: YouTube blocks this server's IP
+
+Established by isolating every other variable:
+
+| Where | Cookies | Result |
+| --- | --- | --- |
+| cPanel server | with cookies + impersonation + Deno | `Sign in to confirm you're not a bot` |
+| cPanel server | none (baseline) | identical failure |
+| Local machine | none | works — full format list |
+
+Cookies changing nothing rules out authentication. The bare command
+succeeding from a home connection and failing from the server, with no auth
+on either side, leaves the IP as the only variable.
+
+**No code change fixes this.** The cookie, impersonation and JS-runtime
+support in this repo are all correctly wired and verified active
+(`python manage.py diagnose_ytdlp <url>` proves it) — they simply address
+different problems than the one blocking YouTube here.
+
+Options, cheapest first:
+
+1. **Accept it.** Instagram, TikTok, Pinterest and Facebook are unaffected.
+   YouTube is the most aggressively defended of the platforms.
+2. **Ask your host for a dedicated IP.** Usually a few dollars a month. On
+   shared hosting the IP is shared with many other accounts, any of which
+   could have earned the block. A dedicated IP may be clean — though it is
+   still a datacenter IP, and those ranges are often blocked as a class.
+3. **Residential proxy.** The only reliably durable answer, and what
+   commercial downloaders use. Ongoing monthly cost. Does not help Instagram
+   or X, whose gates are session-based rather than IP-based.
+
+Re-test any of these with `diagnose_ytdlp` rather than by guessing.
 | **Terms of service** | Most shared-hosting AUPs prohibit video-downloader services and the bandwidth they generate. Worth reading yours before you migrate — a suspension takes the frontend down with it. |
 
 If you hit the IP-block problem, B1 is the fix: move the API back to Railway
