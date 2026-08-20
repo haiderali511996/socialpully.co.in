@@ -331,7 +331,10 @@ export default function DownloadForm({ platform = 'all' }) {
                     <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
                       <AlertCircle className="text-red-600" size={40} />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h3>
+                    {/* Deliberately not "Something went wrong" — the message below often
+                        explains that the platform declined the request, which is not a
+                        fault on our side and shouldn't read as one. */}
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Couldn&apos;t download this video</h3>
                     <p className="text-red-600 mb-6">{error}</p>
                     <button onClick={() => { setError(''); setShowModal(false); }} className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition">
                       Try Again
