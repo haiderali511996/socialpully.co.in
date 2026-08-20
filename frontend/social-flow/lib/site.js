@@ -8,7 +8,7 @@
 // NOTE: this is read at *build* time, not run time. Changing it means
 // rebuilding (`npm run build`), not just restarting the server.
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://hunainimpex.com'
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://socialpully.com'
 ).replace(/\/$/, '');
 
 // Bare hostname, handy for display copy and instructions.

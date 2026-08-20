@@ -1,45 +1,41 @@
-# Deploying to cPanel (hunainimpex.com)
+# Deploying to cPanel (socialpully.com)
 
 ## Domain plan
 
 | Host | Serves | cPanel app type |
 | --- | --- | --- |
-| `hunainimpex.com` (apex, main domain) | Next.js frontend | Setup **Node.js** App |
-| `api.hunainimpex.com` | Django API | Setup **Python** App, or a CNAME to Railway |
+| `socialpully.com` (apex) | Next.js frontend | Setup **Node.js** App |
+| `api.socialpully.com` | Django API | Setup **Python** App, or a CNAME to Railway |
 
 These are the committed defaults — `lib/site.js` falls back to
-`https://hunainimpex.com` and the API client falls back to
-`https://api.hunainimpex.com`, so a build with no environment variables set
+`https://socialpully.com` and the API client falls back to
+`https://api.socialpully.com`, so a build with no environment variables set
 already produces the right URLs. Setting them explicitly in `.env.production`
 is still recommended, so a future domain change is one edit.
 
 ### Read this before you start
 
-**Putting the frontend on the apex replaces whatever is currently served at
-`hunainimpex.com`.** When you point a cPanel Node.js app at the main domain,
-cPanel writes a Passenger handoff into `public_html/.htaccess` and Apache stops
-serving the files that are there. Concretely:
+**`socialpully.com` is a secondary domain on this account, not the primary
+one.** The account's primary domain owns `public_html`; every additional
+domain gets its own document root beside it. So on this server:
 
-- Any existing import/export website at `hunainimpex.com` disappears from the
-  web the moment the Node app starts.
-- Any pages of it that Google has indexed start returning the downloader's 404.
-- Email, databases and subdomains are unaffected — this is only about what the
-  web root serves.
+| Domain | Document root |
+| --- | --- |
+| the account's primary domain | `~/public_html` |
+| `socialpully.com` | `~/socialpully.com` |
+| `api.socialpully.com` | `~/api.socialpully.com` |
 
-So before step 1:
+**Every `.htaccess` instruction below refers to the domain's own document
+root, never `public_html`.** Editing `public_html/.htaccess` would change a
+different website on this account.
 
-```bash
-# from cPanel Terminal — keep a copy of whatever is there now
-tar czf ~/public_html-backup-$(date +%F).tar.gz -C /home/USER public_html
-```
-
-If `public_html` currently holds a real business site you still want, stop and
-put the downloader on a subdomain instead — everything below works unchanged
-if you swap `hunainimpex.com` for `socialpully.hunainimpex.com`.
+Application code lives outside all of these, in `~/repos/socialpully`.
+Passenger connects a document root to the code; keeping source out of the web
+root is what stops anyone fetching `.env.production` over HTTP.
 
 ### www vs apex
 
-Canonical tags will say `https://hunainimpex.com`, so `www.hunainimpex.com`
+Canonical tags will say `https://socialpully.com`, so `www.socialpully.com`
 must redirect there rather than serve a duplicate copy. Step 1 covers it.
 
 Throughout this document, replace `USER` with your cPanel username.
@@ -74,43 +70,52 @@ Two shared-hosting limits worth checking before you start:
 
 ---
 
-## 1. Prepare the main domain
+## 1. Add the domain and point DNS at this server
 
-The apex already exists, so there is nothing to create. Two things to do.
+**a. Point the domain's DNS here.** At your domain registrar, set an `A` record
+for `socialpully.com` (and one for `www`) to this server's IP. Find the IP in
+cPanel's right-hand sidebar under **Shared IP Address**. DNS changes can take
+anywhere from minutes to a few hours to take effect.
 
-**a. Back up the current web root** — see the warning above:
+**b. Add it in cPanel.** cPanel → **Domains → Create A New Domain**:
+
+- Domain: `socialpully.com`
+- Untick *Share document root* so it gets its own directory
+- Document root: accept the default, `/home/USER/socialpully.com`
+
+Confirm DNS has actually propagated before continuing — the certificate in
+step 2 cannot be issued until it has:
 
 ```bash
-tar czf ~/public_html-backup-$(date +%F).tar.gz -C /home/USER public_html
+dig +short socialpully.com
 ```
 
-**b. Redirect www to the apex.** Edit `/home/USER/public_html/.htaccess` and put
-this at the very top, *above* any block cPanel has written:
+That should print this server's IP.
+
+**c. Redirect www to the apex.** Edit `/home/USER/socialpully.com/.htaccess`
+and put this at the very top, *above* any block cPanel has written:
 
 ```apache
 RewriteEngine On
-RewriteCond %{HTTP_HOST} ^www\.hunainimpex\.com$ [NC]
-RewriteRule ^(.*)$ https://hunainimpex.com/$1 [R=301,L]
+RewriteCond %{HTTP_HOST} ^www\.socialpully\.com$ [NC]
+RewriteRule ^(.*)$ https://socialpully.com/$1 [R=301,L]
 ```
 
 Doing this in Apache rather than Next.js middleware means the redirect costs
 nothing — it never reaches Node.
 
-> Application code does **not** go in `public_html`. Passenger serves it from a
-> separate directory that cPanel wires up in step 4. Keeping source out of the
-> web root is what stops anyone fetching your `.env.production` over HTTP.
-
 ---
 
-## 2. Check the SSL certificate
+## 2. Issue the SSL certificate
 
-cPanel → **Security → SSL/TLS Status**. The main domain almost certainly has a
-certificate already; confirm it covers **both** `hunainimpex.com` and
-`www.hunainimpex.com`, and run **AutoSSL** if either is missing.
+cPanel → **Security → SSL/TLS Status** → tick `socialpully.com` **and**
+`www.socialpully.com` → **Run AutoSSL**.
 
-This matters before you go live: the site calls the API over HTTPS, and if the
-frontend is served over plain HTTP, browsers block those calls as mixed content
-and every download fails silently.
+This must succeed before you go live: the site calls the API over HTTPS, and if
+the frontend is served over plain HTTP, browsers block those calls as mixed
+content and every download fails silently with nothing visible to the user.
+
+If AutoSSL fails, DNS has not finished propagating — wait and re-run it.
 
 ---
 
@@ -146,7 +151,7 @@ cPanel → **Software → Setup Node.js App** → **Create Application**
 | Node.js version | 20.x (or 18.17+) |
 | Application mode | Production |
 | Application root | `repos/socialpully/frontend/social-flow` |
-| Application URL | `hunainimpex.com` |
+| Application URL | `socialpully.com` |
 | Application startup file | `server.js` |
 
 `server.js` is committed in the repo. Passenger does not run `next start`; it
@@ -171,14 +176,14 @@ step 4.
 
 ```bash
 cat > .env.production <<'EOF'
-NEXT_PUBLIC_SITE_URL=https://hunainimpex.com
-NEXT_PUBLIC_API_BASE=https://api.hunainimpex.com
+NEXT_PUBLIC_SITE_URL=https://socialpully.com
+NEXT_PUBLIC_API_BASE=https://api.socialpully.com
 NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=
 EOF
 ```
 
 > `NEXT_PUBLIC_API_BASE` must match whatever Part B leaves you with. Both
-> routes in Part B end up on `https://api.hunainimpex.com`, so this value is
+> routes in Part B end up on `https://api.socialpully.com`, so this value is
 > the same either way. Changing it later means editing this file and
 > **rebuilding**.
 
@@ -211,8 +216,8 @@ minutes and prints a route table when it succeeds.
 > **If the build is killed** (exit code 137, "Killed", or it dies with no
 > message) you hit the memory limit. Build on your own machine instead:
 > ```bash
-> NEXT_PUBLIC_SITE_URL=https://hunainimpex.com \
-> NEXT_PUBLIC_API_BASE=https://api.hunainimpex.com \
+> NEXT_PUBLIC_SITE_URL=https://socialpully.com \
+> NEXT_PUBLIC_API_BASE=https://api.socialpully.com \
 > npm run build
 > ```
 > then upload the resulting `.next/` directory into the application root on the
@@ -232,7 +237,7 @@ mkdir -p tmp && touch tmp/restart.txt
 
 Passenger picks up `tmp/restart.txt` on the next request and reloads.
 
-Visit `https://hunainimpex.com`. You should get the homepage.
+Visit `https://socialpully.com`. You should get the homepage.
 
 ---
 
@@ -246,9 +251,9 @@ your service → **Variables**:
 | --- | --- |
 | `SECRET_KEY` | a fresh random key (see below) |
 | `DEBUG` | `False` |
-| `ALLOWED_HOSTS` | `api.hunainimpex.com` |
-| `CORS_ALLOWED_ORIGINS` | `https://hunainimpex.com` |
-| `CSRF_TRUSTED_ORIGINS` | `https://api.hunainimpex.com` |
+| `ALLOWED_HOSTS` | `api.socialpully.com` |
+| `CORS_ALLOWED_ORIGINS` | `https://socialpully.com` |
+| `CSRF_TRUSTED_ORIGINS` | `https://api.socialpully.com` |
 | `DATABASE_URL` | provided by the Railway Postgres plugin |
 
 Generate the secret key with:
@@ -270,23 +275,23 @@ Redeploy the Railway service so the variables take effect.
 
 ```bash
 # Frontend serves and canonicals point at the subdomain
-curl -s https://hunainimpex.com | grep canonical
+curl -s https://socialpully.com | grep canonical
 
 # Sitemap and robots carry the new host
-curl -s https://hunainimpex.com/sitemap.xml | head -20
-curl -s https://hunainimpex.com/robots.txt
+curl -s https://socialpully.com/sitemap.xml | head -20
+curl -s https://socialpully.com/robots.txt
 
 # Redirects work (expect 308)
-curl -sI https://hunainimpex.com/ig | head -3
+curl -sI https://socialpully.com/ig | head -3
 
 # Backend reachable
-curl -s https://api.hunainimpex.com/api/health/
+curl -s https://api.socialpully.com/api/health/
 ```
 
 Then open the site in a browser, paste a video URL, and watch the Network tab:
 the request to `/api/info/` must return 200 with no CORS error in the console.
 
-Finally, in Google Search Console add `hunainimpex.com` as a
+Finally, in Google Search Console add `socialpully.com` as a
 property and submit `sitemap.xml`.
 
 ---
@@ -307,6 +312,42 @@ value — restarting alone will not pick it up.
 
 ---
 
+## 10. Retiring a previous domain
+
+If the site was previously served on another domain on this account, that
+domain keeps serving the app until its Passenger config is removed — two
+domains serving identical content, which splits search ranking between them.
+
+For each old domain, edit its document root's `.htaccess` (e.g.
+`~/olddomain.com/.htaccess`) and delete the block between:
+
+```
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+...
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+```
+
+Then remove the application itself in cPanel → **Setup Node.js App** (and
+**Setup Python App** for an old API subdomain), so it stops consuming a
+process slot.
+
+Verify the old host no longer answers with the app:
+
+```bash
+curl -sI https://olddomain.com | head -3
+```
+
+> If the old domain was ever indexed by Google, a 301 redirect to the new
+> domain preserves that ranking instead of discarding it — put this *above*
+> the Passenger block rather than deleting the file:
+> ```apache
+> RewriteEngine On
+> RewriteRule ^(.*)$ https://socialpully.com/$1 [R=301,L]
+> ```
+> Only skip the redirect if the old domain is going back to a different use.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -323,9 +364,8 @@ value — restarting alone will not pick it up.
 | CORS error in browser console | `CORS_ALLOWED_ORIGINS` doesn't match | Must be the exact origin including `https://`, no trailing slash |
 | Downloads fail, console shows mixed content | Subdomain not on HTTPS | Run AutoSSL (step 2) |
 | Canonical tags show the wrong domain | `NEXT_PUBLIC_SITE_URL` unset at build time | Fix `.env.production`, then **rebuild** |
-| The old business site is gone from `hunainimpex.com` | Expected — the Node app now owns the apex | Restore from the `public_html` backup and move the app to a subdomain |
-| `api.hunainimpex.com` serves the frontend, or 500s | Its document root sits inside `public_html`, inheriting the apex's Passenger config | Recreate it with a document root outside `public_html` — see B2.1 |
-| `www.hunainimpex.com` serves a duplicate of the site | www redirect missing | Add the rewrite from step 1b, above cPanel's block in `public_html/.htaccess` |
+| `api.socialpully.com` serves the frontend, or 500s | Its document root sits inside `~/socialpully.com`, inheriting the frontend's Passenger config | Recreate it with a document root outside `~/socialpully.com` — see B2.1 |
+| `www.socialpully.com` serves a duplicate of the site | www redirect missing | Add the rewrite from step 1c, above cPanel's block in `~/socialpully.com/.htaccess` |
 | First request after idle is slow | Passenger stops idle apps | Normal on shared hosting; a cron hitting the site every few minutes keeps it warm |
 
 ---
@@ -334,7 +374,7 @@ value — restarting alone will not pick it up.
 
 # Part B — Backend (Django API)
 
-You have two ways to put the API on `api.hunainimpex.com`. They
+You have two ways to put the API on `api.socialpully.com`. They
 differ in where the work actually runs.
 
 ## B1 — Point the subdomain at Railway (recommended)
@@ -343,8 +383,8 @@ Keep Django running on Railway and give it your branded hostname. You get the
 domain you want without inheriting shared hosting's limits.
 
 1. Railway → your service → **Settings → Networking → Custom Domain** → add
-   `api.hunainimpex.com`. Railway shows a CNAME target.
-2. cPanel → **Domains → Zone Editor** for `hunainimpex.com` → **Add Record**:
+   `api.socialpully.com`. Railway shows a CNAME target.
+2. cPanel → **Domains → Zone Editor** for `socialpully.com` → **Add Record**:
    - Type: `CNAME`
    - Name: `api`
    - Record: the target Railway gave you
@@ -354,9 +394,9 @@ domain you want without inheriting shared hosting's limits.
 
    | Variable | Value |
    | --- | --- |
-   | `ALLOWED_HOSTS` | `api.hunainimpex.com` |
-   | `CSRF_TRUSTED_ORIGINS` | `https://api.hunainimpex.com` |
-   | `CORS_ALLOWED_ORIGINS` | `https://hunainimpex.com` |
+   | `ALLOWED_HOSTS` | `api.socialpully.com` |
+   | `CSRF_TRUSTED_ORIGINS` | `https://api.socialpully.com` |
+   | `CORS_ALLOWED_ORIGINS` | `https://socialpully.com` |
 
 Railway issues the TLS certificate itself. Nothing else changes.
 
@@ -370,16 +410,16 @@ of this part before committing to it.
 
 ### B2.1 Create the subdomain and certificate
 
-cPanel → **Domains → Create A New Domain** → `api.hunainimpex.com`.
+cPanel → **Domains → Create A New Domain** → `api.socialpully.com`.
 
 > **Change the document root away from the default.** cPanel proposes
-> `/home/USER/public_html/api`. Do not accept it. Once the frontend owns the
-> apex, `public_html/.htaccess` carries `PassengerBaseURI "/"`, and Apache
-> applies that to every directory beneath it — including a subdomain rooted
-> there. You get two Passenger apps fighting over the same tree, which fails in
-> confusing ways.
+> `/home/USER/socialpully.com/api`. Do not accept it. The frontend's document
+> root carries `PassengerBaseURI "/"`, and Apache applies that to every
+> directory beneath it — including a subdomain rooted there. You get two
+> Passenger apps fighting over the same tree, which fails in confusing ways.
 >
-> Set it to `/home/USER/api.hunainimpex.com` instead, outside `public_html`.
+> Set it to `/home/USER/api.socialpully.com` instead, a sibling of the
+> frontend's document root rather than a child of it.
 
 Then run AutoSSL for the new subdomain (frontend step 02).
 
@@ -403,7 +443,7 @@ cPanel → **Software → Setup Python App** → **Create Application**
 | --- | --- |
 | Python version | 3.12 (anything 3.10+ works; Django 5.2 requires it) |
 | Application root | `repos/socialpully/backend/video_downloader` |
-| Application URL | `api.hunainimpex.com` |
+| Application URL | `api.socialpully.com` |
 | Application startup file | `passenger_wsgi.py` |
 | Application Entry point | `application` |
 
@@ -445,9 +485,9 @@ Django's MySQL backend works with no further changes.
 cat > .env <<'EOF'
 SECRET_KEY=paste-a-generated-key-here
 DEBUG=False
-ALLOWED_HOSTS=api.hunainimpex.com
-CORS_ALLOWED_ORIGINS=https://hunainimpex.com
-CSRF_TRUSTED_ORIGINS=https://api.hunainimpex.com
+ALLOWED_HOSTS=api.socialpully.com
+CORS_ALLOWED_ORIGINS=https://socialpully.com
+CSRF_TRUSTED_ORIGINS=https://api.socialpully.com
 DATABASE_URL=mysql://USER_dbuser:PASSWORD@localhost:3306/USER_socialpully
 EOF
 chmod 600 .env
@@ -476,7 +516,7 @@ python manage.py collectstatic --noinput
 Click **Restart** in Setup Python App, then:
 
 ```bash
-curl -s https://api.hunainimpex.com/api/health/
+curl -s https://api.socialpully.com/api/health/
 ```
 
 You should get JSON including `yt_dlp_version`. Note whether
@@ -523,18 +563,18 @@ platforms (YouTube, TikTok, Facebook, Twitter/X, Pinterest) don't need this.
 2. Install a cookie-export extension — e.g. "Get cookies.txt LOCALLY" for
    Chrome/Firefox — and export cookies for `instagram.com` in Netscape format.
 3. Upload the resulting file to the server as
-   `~/api.hunainimpex.com/cookies.txt` (cPanel File Manager, or `scp`).
+   `~/api.socialpully.com/cookies.txt` (cPanel File Manager, or `scp`).
 4. Restrict it and restart:
    ```bash
-   chmod 600 ~/api.hunainimpex.com/cookies.txt
-   touch ~/api.hunainimpex.com/tmp/restart.txt
+   chmod 600 ~/api.socialpully.com/cookies.txt
+   touch ~/api.socialpully.com/tmp/restart.txt
    ```
 
 No `.env` change needed — `YTDLP_COOKIES_FILE` defaults to `cookies.txt` in
 the project root, which is exactly where this puts it. Verify:
 
 ```bash
-curl -si -X POST https://api.hunainimpex.com/api/info/ \
+curl -si -X POST https://api.socialpully.com/api/info/ \
   -H "Content-Type: application/json" \
   -d '{"url":"<an instagram reel/post url>"}'
 ```
@@ -552,9 +592,9 @@ support multiple domains in one file, so this doesn't need a second file —
 merge rather than overwrite:
 
 ```bash
-cp ~/api.hunainimpex.com/cookies.txt ~/api.hunainimpex.com/cookies.txt.bak
-cat ~/api.hunainimpex.com/cookies.txt.bak youtube_cookies.txt > ~/api.hunainimpex.com/cookies.txt
-chmod 600 ~/api.hunainimpex.com/cookies.txt
+cp ~/api.socialpully.com/cookies.txt ~/api.socialpully.com/cookies.txt.bak
+cat ~/api.socialpully.com/cookies.txt.bak youtube_cookies.txt > ~/api.socialpully.com/cookies.txt
+chmod 600 ~/api.socialpully.com/cookies.txt
 ```
 
 **`"ERROR: The downloaded file is empty"`** (info-fetch succeeds, cookies
@@ -590,11 +630,11 @@ safe no-ops if left unconfigured:
 After either step:
 
 ```bash
-touch ~/api.hunainimpex.com/tmp/restart.txt
+touch ~/api.socialpully.com/tmp/restart.txt
 ```
 
 ```bash
-curl -si -X POST https://api.hunainimpex.com/api/download/ \
+curl -si -X POST https://api.socialpully.com/api/download/ \
   -H "Content-Type: application/json" \
   -d '{"url":"<a youtube video url>","quality":"best","format":"mp4"}'
 ```

@@ -4,7 +4,7 @@ import { Download, Loader, CheckCircle, AlertCircle, Video, Info, Clock, Eye, X 
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, '') ||
-  'https://api.hunainimpex.com';
+  'https://api.socialpully.com';
 
 const PLATFORM_CONFIG = {
   instagram: {
