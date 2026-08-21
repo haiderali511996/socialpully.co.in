@@ -217,3 +217,16 @@ YTDLP_COOKIES_FILE = os.environ.get('YTDLP_COOKIES_FILE') or str(BASE_DIR / 'coo
 # compiler needed); see DEPLOYMENT.md for the install steps. Absent, yt-dlp
 # falls back to its previous behavior.
 YTDLP_DENO_PATH = os.environ.get('YTDLP_DENO_PATH') or os.path.expanduser('~/.deno/bin/deno')
+
+# Optional proxy URL (e.g. http://user:pass@host:port) used only for YouTube
+# requests. Confirmed via testing that this server's IP is blocked by
+# YouTube specifically -- the same request succeeds from an unrelated
+# machine with no cookies at all, and fails identically here with or
+# without cookies/impersonation/a JS runtime, which rules out
+# authentication as the cause. A datacenter IP swap doesn't reliably fix
+# this since YouTube blocks broad datacenter ranges, not just one IP, so a
+# residential proxy is the practical fix. Every other platform works fine
+# without this and is unaffected -- see proxy_opts() in downloader/views.py,
+# which only applies it to youtube.com/youtu.be URLs. Absent, YouTube
+# requests are simply unproxied (and likely still blocked).
+YTDLP_PROXY_URL = os.environ.get('YTDLP_PROXY_URL', '')

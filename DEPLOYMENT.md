@@ -678,11 +678,6 @@ Cookies changing nothing rules out authentication. The bare command
 succeeding from a home connection and failing from the server, with no auth
 on either side, leaves the IP as the only variable.
 
-**No code change fixes this.** The cookie, impersonation and JS-runtime
-support in this repo are all correctly wired and verified active
-(`python manage.py diagnose_ytdlp <url>` proves it) — they simply address
-different problems than the one blocking YouTube here.
-
 Options, cheapest first:
 
 1. **Accept it.** Instagram, TikTok, Pinterest and Facebook are unaffected.
@@ -693,9 +688,16 @@ Options, cheapest first:
    still a datacenter IP, and those ranges are often blocked as a class.
 3. **Residential proxy.** The only reliably durable answer, and what
    commercial downloaders use. Ongoing monthly cost. Does not help Instagram
-   or X, whose gates are session-based rather than IP-based.
+   or X, whose gates are session-based rather than IP-based. Implemented:
+   set `YTDLP_PROXY_URL` in `.env` to a proxy URL
+   (`http://user:pass@host:port`) from a residential proxy provider (e.g.
+   Webshare, IPRoyal, Bright Data). `proxy_opts()` in `downloader/views.py`
+   applies it only to `youtube.com`/`youtu.be` requests — every other
+   platform is untouched and doesn't pay for the proxy's bandwidth.
+   Restart after setting it, then re-test.
 
-Re-test any of these with `diagnose_ytdlp` rather than by guessing.
+Re-test any of these with `diagnose_ytdlp` rather than by guessing — it now
+includes a `proxy` layer once `YTDLP_PROXY_URL` is set.
 | **Terms of service** | Most shared-hosting AUPs prohibit video-downloader services and the bandwidth they generate. Worth reading yours before you migrate — a suspension takes the frontend down with it. |
 
 If you hit the IP-block problem, B1 is the fix: move the API back to Railway

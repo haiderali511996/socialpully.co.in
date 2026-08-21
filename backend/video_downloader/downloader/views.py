@@ -96,6 +96,29 @@ def js_runtime_opts() -> dict:
     return {}
 
 
+_YOUTUBE_HOSTS = ('youtube.com', 'youtu.be')
+
+
+def proxy_opts(url: str) -> dict:
+    """yt-dlp proxy kwarg, only for YouTube URLs and only when configured.
+
+    This server's IP is blocked by YouTube specifically (confirmed: the same
+    request succeeds from an unrelated machine, with or without cookies) --
+    no other platform needs this. Routing every request through a proxy
+    would cost bandwidth for no benefit, so this only applies to youtube.com
+    / youtu.be links, and only when settings.YTDLP_PROXY_URL is set.
+    """
+    proxy = getattr(settings, 'YTDLP_PROXY_URL', None)
+    if not proxy or not url:
+        return {}
+    host = url.split('//', 1)[-1].split('/', 1)[0].lower()
+    if host.startswith('www.'):
+        host = host[4:]
+    if host in _YOUTUBE_HOSTS:
+        return {'proxy': proxy}
+    return {}
+
+
 # Maps a substring of yt-dlp's raw error text to something a visitor can act
 # on. Order matters: the first match wins, so put specific patterns above
 # general ones. The raw text is still returned in the response's `details`
@@ -331,6 +354,7 @@ class VideoInfoView(APIView):
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
+        ydl_opts.update(proxy_opts(url))
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -406,6 +430,7 @@ class TikTokStreamView(APIView):
             ydl_opts['noplaylist'] = True
             ydl_opts.update(impersonate_opts())
             ydl_opts.update(js_runtime_opts())
+            ydl_opts.update(proxy_opts(video_download.url))
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_download.url, download=False)
@@ -464,6 +489,7 @@ class DownloadVideoView(APIView):
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
+        ydl_opts.update(proxy_opts(url))
 
         # Add FFmpeg location and merge format if available
         if has_ffmpeg:
@@ -615,6 +641,7 @@ class DirectURLView(APIView):
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
+        ydl_opts.update(proxy_opts(url))
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -672,6 +699,7 @@ class DownloadAudioView(APIView):
             ydl_opts['noplaylist'] = True
             ydl_opts.update(impersonate_opts())
             ydl_opts.update(js_runtime_opts())
+            ydl_opts.update(proxy_opts(url))
 
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -751,6 +779,7 @@ class DownloadAudioView(APIView):
         ydl_opts['noplaylist'] = True
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
+        ydl_opts.update(proxy_opts(url))
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

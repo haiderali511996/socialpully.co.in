@@ -4,7 +4,7 @@ import yt_dlp
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from downloader.views import cookie_opts, impersonate_opts, js_runtime_opts
+from downloader.views import cookie_opts, impersonate_opts, js_runtime_opts, proxy_opts
 
 
 class _SilentLogger:
@@ -47,10 +47,11 @@ class Command(BaseCommand):
             ),
         )
 
-    def _combinations(self):
+    def _combinations(self, url):
         cookies = cookie_opts()
         impersonate = impersonate_opts()
         js = js_runtime_opts()
+        proxy = proxy_opts(url)
 
         combos = [('baseline (nothing)', {})]
         if cookies:
@@ -59,25 +60,31 @@ class Command(BaseCommand):
             combos.append(('impersonation', dict(impersonate)))
         if js:
             combos.append(('js runtime', dict(js)))
+        if proxy:
+            combos.append(('proxy', dict(proxy)))
         if cookies and impersonate:
             combos.append(('cookies + impersonation', {**cookies, **impersonate}))
         if cookies and js:
             combos.append(('cookies + js runtime', {**cookies, **js}))
         if cookies and impersonate and js:
-            combos.append(('cookies + impersonation + js (what the app uses)',
+            combos.append(('cookies + impersonation + js',
                            {**cookies, **impersonate, **js}))
-        return combos, cookies, impersonate, js
+        if cookies and impersonate and js and proxy:
+            combos.append(('cookies + impersonation + js + proxy (what the app uses)',
+                           {**cookies, **impersonate, **js, **proxy}))
+        return combos, cookies, impersonate, js, proxy
 
     def handle(self, *args, **options):
         url = options['url']
         do_download = options['download']
 
-        combos, cookies, impersonate, js = self._combinations()
+        combos, cookies, impersonate, js, proxy = self._combinations(url)
 
         self.stdout.write('Configured layers:')
         self.stdout.write(f'  cookies file : {settings.YTDLP_COOKIES_FILE if cookies else "NOT FOUND / disabled"}')
         self.stdout.write(f'  impersonation: {impersonate.get("impersonate") if impersonate else "unavailable / disabled"}')
         self.stdout.write(f'  js runtime   : {js.get("js_runtimes") if js else "unavailable / not installed"}')
+        self.stdout.write(f'  proxy        : {"configured" if proxy else "not set / not a YouTube URL"}')
         self.stdout.write(f'  yt-dlp       : {yt_dlp.version.__version__}')
         self.stdout.write('')
 
