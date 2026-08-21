@@ -688,7 +688,7 @@ None of these stop the app booting. They shape what it can do.
 | **Memory** | yt-dlp plus Django in one Passenger process is tight under a 1 GB LVE limit. Concurrent downloads are what push it over. |
 | **IP reputation** | The single biggest limitation, and confirmed on this deployment — see below. Platforms block shared-hosting IP ranges wholesale. This is the failure most likely to make the site look broken while everything is configured correctly. |
 
-#### Confirmed: YouTube blocks this server's IP
+#### Confirmed: YouTube blocked this server's IP — and later un-blocked it
 
 Established by isolating every other variable:
 
@@ -701,6 +701,15 @@ Established by isolating every other variable:
 Cookies changing nothing rules out authentication. The bare command
 succeeding from a home connection and failing from the server, with no auth
 on either side, leaves the IP as the only variable.
+
+**Update:** this cleared on its own after some time (`diagnose_ytdlp
+<url> --download` started returning `OK` on every combination, including
+baseline with no cookies, no impersonation, nothing). So the block wasn't
+permanent — worth treating as a rate-limit/reputation signal that can
+recover, not a fixed dead end. If it recurs, re-run `diagnose_ytdlp` before
+assuming anything else broke; the proxy option below is implemented and
+ready (`YTDLP_PROXY_URL` in `.env`) but isn't worth paying for while
+YouTube isn't actually blocked.
 
 Options, cheapest first:
 
