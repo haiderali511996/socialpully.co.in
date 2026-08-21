@@ -303,12 +303,26 @@ source /home/USER/nodevenv/repos/socialpully/frontend/social-flow/20/bin/activat
   && cd /home/USER/repos/socialpully/frontend/social-flow
 git pull
 npm ci --include=dev
-npm run build
+RAYON_NUM_THREADS=1 npm run build
 touch tmp/restart.txt
 ```
 
 Rebuild is required for **any** change, including changing a `NEXT_PUBLIC_*`
 value — restarting alone will not pick it up.
+
+`RAYON_NUM_THREADS=1` avoids a separate CloudLinux thread-pool crash from
+SWC's Rust-based minifier (`thread 'node' panicked ... rayon-core ...
+ThreadPoolBuildError`) — distinct from the EAGAIN issue already handled by
+`next.config.js`, and more likely to show up the more concurrent apps this
+account is running (e.g. once the backend app also exists). Keep using it
+on every build here.
+
+Since Application root **is** this git checkout, `git pull` affects the
+live site immediately — there's no staging step. Also avoid re-saving this
+app's config in cPanel's **Setup Node.js App** UI once it's working: doing
+so can regenerate/overwrite files in the app root (see the identical
+`passenger_wsgi.py`-clobbering issue documented in B2.3) — if that ever
+happens to a tracked file, `git checkout -- <file>` restores it.
 
 ---
 
@@ -461,6 +475,16 @@ cPanel → **Software → Setup Python App** → **Create Application**
 > `.env` file that `passenger_wsgi.py` reads, which keeps the database password
 > out of the cPanel UI and lets you `chmod 600` it. Using this panel instead
 > also works — real environment variables take precedence over the file.
+>
+> **cPanel overwrites `passenger_wsgi.py` on creation.** Even though the repo
+> already has a working one, clicking Create replaces it with cPanel's own
+> generic Passenger stub — self-referential boilerplate that recurses into
+> itself and crashes with a bare 500 (no app-level error page at all, since
+> the crash happens before Django ever loads). Confirmed via `git diff
+> passenger_wsgi.py` showing it modified immediately after app creation.
+> Fix: `git checkout -- passenger_wsgi.py` restores the real one, then
+> restart. This can also happen again if you re-save the app's settings in
+> this same cPanel screen later — same fix if it does.
 
 Copy the activation command cPanel prints at the top of the page.
 
