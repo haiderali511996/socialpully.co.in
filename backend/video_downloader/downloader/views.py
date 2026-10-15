@@ -119,6 +119,25 @@ def proxy_opts(url: str) -> dict:
     return {}
 
 
+@functools.lru_cache(maxsize=1)
+def youtube_client_opts() -> dict:
+    """yt-dlp extractor_args picking which YouTube "player client" to use.
+
+    yt-dlp's default web client is the one subject to the "Sign in to
+    confirm you're not a bot" wall; the tv client in particular tends to
+    skip it, since YouTube doesn't expect a TV device to be signed in.
+    Harmless to apply unconditionally (not just to YouTube URLs, unlike
+    proxy_opts): yt-dlp ignores extractor_args keyed to an extractor it
+    isn't using for a given URL. A no-op when
+    settings.YTDLP_YOUTUBE_PLAYER_CLIENT is empty.
+    """
+    raw = getattr(settings, 'YTDLP_YOUTUBE_PLAYER_CLIENT', '')
+    clients = [c.strip() for c in raw.split(',') if c.strip()]
+    if not clients:
+        return {}
+    return {'extractor_args': {'youtube': {'player_client': clients}}}
+
+
 # Maps a substring of yt-dlp's raw error text to something a visitor can act
 # on. Order matters: the first match wins, so put specific patterns above
 # general ones. The raw text is still returned in the response's `details`
@@ -355,6 +374,7 @@ class VideoInfoView(APIView):
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
         ydl_opts.update(proxy_opts(url))
+        ydl_opts.update(youtube_client_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -431,6 +451,7 @@ class TikTokStreamView(APIView):
             ydl_opts.update(impersonate_opts())
             ydl_opts.update(js_runtime_opts())
             ydl_opts.update(proxy_opts(video_download.url))
+            ydl_opts.update(youtube_client_opts())
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_download.url, download=False)
@@ -490,6 +511,7 @@ class DownloadVideoView(APIView):
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
         ydl_opts.update(proxy_opts(url))
+        ydl_opts.update(youtube_client_opts())
 
         # Add FFmpeg location and merge format if available
         if has_ffmpeg:
@@ -642,6 +664,7 @@ class DirectURLView(APIView):
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
         ydl_opts.update(proxy_opts(url))
+        ydl_opts.update(youtube_client_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -700,6 +723,7 @@ class DownloadAudioView(APIView):
             ydl_opts.update(impersonate_opts())
             ydl_opts.update(js_runtime_opts())
             ydl_opts.update(proxy_opts(url))
+            ydl_opts.update(youtube_client_opts())
 
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -780,6 +804,7 @@ class DownloadAudioView(APIView):
         ydl_opts.update(impersonate_opts())
         ydl_opts.update(js_runtime_opts())
         ydl_opts.update(proxy_opts(url))
+        ydl_opts.update(youtube_client_opts())
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

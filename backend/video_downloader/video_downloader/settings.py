@@ -230,3 +230,16 @@ YTDLP_DENO_PATH = os.environ.get('YTDLP_DENO_PATH') or os.path.expanduser('~/.de
 # which only applies it to youtube.com/youtu.be URLs. Absent, YouTube
 # requests are simply unproxied (and likely still blocked).
 YTDLP_PROXY_URL = os.environ.get('YTDLP_PROXY_URL', '')
+
+# Comma-separated yt-dlp YouTube "player client" list (e.g. tv, android,
+# ios, web, mweb) -- every combination tested so far (cookies, impersonation,
+# a JS runtime) used yt-dlp's default web client, which is the one subject
+# to the "Sign in to confirm you're not a bot" wall. The tv client in
+# particular skips it: YouTube doesn't expect a TV device to be signed in,
+# so it isn't gated the same way. yt-dlp tries clients in order and falls
+# back, so listing more than one is safe. Harmless for non-YouTube
+# platforms -- extractor_args keyed to an extractor yt-dlp isn't using for
+# a given URL are simply ignored, so this can be applied unconditionally
+# rather than scoped to YouTube URLs like proxy_opts() is. Empty disables
+# this and leaves yt-dlp's own default client selection in place.
+YTDLP_YOUTUBE_PLAYER_CLIENT = os.environ.get('YTDLP_YOUTUBE_PLAYER_CLIENT', 'tv,web')

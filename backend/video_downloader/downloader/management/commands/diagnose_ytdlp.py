@@ -4,7 +4,9 @@ import yt_dlp
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from downloader.views import cookie_opts, impersonate_opts, js_runtime_opts, proxy_opts
+from downloader.views import (
+    cookie_opts, impersonate_opts, js_runtime_opts, proxy_opts, youtube_client_opts,
+)
 
 
 class _SilentLogger:
@@ -52,8 +54,11 @@ class Command(BaseCommand):
         impersonate = impersonate_opts()
         js = js_runtime_opts()
         proxy = proxy_opts(url)
+        yt_client = youtube_client_opts()
 
         combos = [('baseline (nothing)', {})]
+        if yt_client:
+            combos.append(('youtube player client', dict(yt_client)))
         if cookies:
             combos.append(('cookies', dict(cookies)))
         if impersonate:
@@ -69,22 +74,29 @@ class Command(BaseCommand):
         if cookies and impersonate and js:
             combos.append(('cookies + impersonation + js',
                            {**cookies, **impersonate, **js}))
+        if cookies and impersonate and js and yt_client:
+            combos.append(('cookies + impersonation + js + youtube client',
+                           {**cookies, **impersonate, **js, **yt_client}))
         if cookies and impersonate and js and proxy:
-            combos.append(('cookies + impersonation + js + proxy (what the app uses)',
+            combos.append(('cookies + impersonation + js + proxy',
                            {**cookies, **impersonate, **js, **proxy}))
-        return combos, cookies, impersonate, js, proxy
+        if cookies and impersonate and js and proxy and yt_client:
+            combos.append(('cookies + impersonation + js + proxy + youtube client (what the app uses)',
+                           {**cookies, **impersonate, **js, **proxy, **yt_client}))
+        return combos, cookies, impersonate, js, proxy, yt_client
 
     def handle(self, *args, **options):
         url = options['url']
         do_download = options['download']
 
-        combos, cookies, impersonate, js, proxy = self._combinations(url)
+        combos, cookies, impersonate, js, proxy, yt_client = self._combinations(url)
 
         self.stdout.write('Configured layers:')
         self.stdout.write(f'  cookies file : {settings.YTDLP_COOKIES_FILE if cookies else "NOT FOUND / disabled"}')
         self.stdout.write(f'  impersonation: {impersonate.get("impersonate") if impersonate else "unavailable / disabled"}')
         self.stdout.write(f'  js runtime   : {js.get("js_runtimes") if js else "unavailable / not installed"}')
         self.stdout.write(f'  proxy        : {"configured" if proxy else "not set / not a YouTube URL"}')
+        self.stdout.write(f'  yt client    : {yt_client.get("extractor_args", {}).get("youtube", {}).get("player_client") if yt_client else "default (disabled)"}')
         self.stdout.write(f'  yt-dlp       : {yt_dlp.version.__version__}')
         self.stdout.write('')
 
